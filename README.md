@@ -1,6 +1,6 @@
 # Watchdog — API Spend Intelligence & Security Vault
 
-**App URL:** https://llm-spend-tracker.netlify.app/
+**App URL:** https://llm-spend-tracker.onrender.com
 
 This repository contains the complete source code for **Watchdog**, a secure, multi-tenant platform designed to track, analyze, and govern API expenditure across multiple AI inference providers. 
 

@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# This rule ensures that React Router handles all page routing
+# instead of Netlify looking for static HTML files for every path.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
