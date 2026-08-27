@@ -1,6 +1,6 @@
 # Watchdog — API Spend Intelligence & Security Vault
 
-**Live Demo:** https://ais-pre-sntyk6owqwryftrrvec4xz-814823091306.asia-southeast1.run.app
+**App URL:** https://ais-pre-sntyk6owqwryftrrvec4xz-814823091306.asia-southeast1.run.app
 
 This repository contains the complete source code for **Watchdog**, a secure, multi-tenant platform designed to track, analyze, and govern API expenditure across multiple AI inference providers. 
 
