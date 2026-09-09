@@ -1,5 +1,11 @@
 # Watchdog — API Spend Intelligence & Security Vault
 
+
+[![CI](https://github.com/musaibmanzoor/watchdog-api-vault/actions/workflows/main.yml/badge.svg)](https://github.com/musaibmanzoor/watchdog-api-vault/actions/workflows/main.yml)
+[![Docker Support](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
+[![Redis Caching](https://img.shields.io/badge/redis-caching-red.svg)](https://redis.io/)
+
+
 **App URL:** https://llm-spend-tracker.onrender.com
 
 This repository contains the complete source code for **Watchdog**, a secure, multi-tenant platform designed to track, analyze, and govern API expenditure across multiple AI inference providers. 
@@ -17,6 +23,27 @@ The resulting app is a hybrid full-stack design:
 *   **The Renderer**: A highly polished, dark-mode React UI utilizing Tailwind CSS, Recharts, and Framer Motion for interactive analytics.
 *   **The Sync Engine**: A Node.js CRON-style worker that securely polls provider billing endpoints and aggregates usage data.
 *   **Alerting**: A built-in threshold evaluator that dispatches Resend emails when expenditure crosses configurable boundaries.
+
+
+## 🧠 System Architecture
+
+Watchdog uses a robust, enterprise-grade architecture:
+
+```mermaid
+graph TD
+    Client[React Frontend] -->|REST API| API[Express.js API Gateway]
+    API -->|Reads/Writes| Cache[(Redis Cache)]
+    API -->|Encrypts Keys| DB[(PostgreSQL DB)]
+    API -->|Queues Jobs| Queue[BullMQ Message Queue]
+    Queue --> Worker[Background Worker]
+    Worker -->|Fetches Data| Providers[OpenAI/Anthropic APIs]
+    Worker -->|Sends Emails| Resend[Resend Email API]
+    Worker -->|Updates Metrics| DB
+```
+
+- **Redis** is used for rate limiting, high-speed API response caching, and managing the BullMQ background job queues.
+- **Background Workers** handle the heavy lifting of polling LLM APIs so the main web thread stays responsive.
+- **AES-256-GCM** encryption ensures API keys are securely vaulted in the PostgreSQL database.
 
 ## Current features
 

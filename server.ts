@@ -1,4 +1,6 @@
 import express from 'express';
+import Redis from 'ioredis';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import cron from 'node-cron';
 import { createServer as createViteServer } from 'vite';
@@ -10,10 +12,52 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Resend } from 'resend';
 
+
+
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', { 
+  maxRetriesPerRequest: null,
+  retryStrategy(times) {
+    if (times > 3) return null; // Stop retrying after 3 attempts
+    return Math.min(times * 50, 2000);
+  }
+});
+redis.on('error', (err) => {
+  console.warn('Redis cache connection error (running without cache):', err.message);
+});
+
+
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key');
+
+
+// Prevent Redis connection errors from crashing the app in development
+process.on('uncaughtException', (err: any) => {
+  if (err.code === 'ECONNREFUSED' && err.port === 6379) {
+    console.warn('Ignored uncaught Redis connection error');
+  } else {
+    console.error('Uncaught Exception:', err);
+    process.exit(1);
+  }
+});
+process.on('unhandledRejection', (reason: any) => {
+  if (reason && reason.code === 'ECONNREFUSED' && reason.port === 6379) {
+    console.warn('Ignored unhandled Redis connection rejection');
+  } else {
+    console.error('Unhandled Rejection:', reason);
+  }
+});
 
 const app = express();
 app.use(express.json());
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: { error: 'Too many requests, please try again later.' }
+});
+app.use('/api/', apiLimiter);
+
 
 const PORT = 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-prod';
@@ -134,9 +178,21 @@ app.delete('/api/keys/:id', authenticateToken, async (req: any, res: any) => {
   }
 });
 
+
 app.get('/api/dashboard', authenticateToken, async (req: any, res: any) => {
   try {
     const { timeframe } = req.query;
+    const cacheKey = `dashboard:${req.user.id}:${timeframe || 'this_month'}`;
+    
+    // Try cache first if redis is available
+    let cachedData = null;
+    if (redis.status === 'ready') {
+      try { cachedData = await redis.get(cacheKey); } catch (e) {}
+    }
+    if (cachedData) {
+      return res.json(JSON.parse(cachedData));
+    }
+
     let startDate = new Date();
     startDate.setDate(1); // Default: this_month
     let endDate = new Date();
@@ -184,7 +240,14 @@ app.get('/api/dashboard', authenticateToken, async (req: any, res: any) => {
       ORDER BY total_cost DESC
     `, [startStr, endStr, req.user.id]);
 
-    res.json({ budgets, spendData, dailyTrend, modelBreakdown, timeframe: timeframe || 'this_month' });
+    const responseData = { budgets, spendData, dailyTrend, modelBreakdown, timeframe: timeframe || 'this_month' };
+    
+    // Cache for 15 minutes
+    if (redis.status === 'ready') {
+      try { await redis.setex(cacheKey, 900, JSON.stringify(responseData)); } catch (e) {}
+    }
+
+    res.json(responseData);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch dashboard data' });
   }
@@ -205,112 +268,38 @@ app.post('/api/budgets', authenticateToken, async (req: any, res: any) => {
   }
 });
 
-app.get('/api/cron/poll-usage', async (req, res) => {
-  // Can be secured via headers in production
-  
+import { pollingQueue } from './src/db/workers.js';
+
+app.post('/api/cron/trigger-sync', authenticateToken, async (req: any, res: any) => {
   try {
-    const { rows: keys } = await query('SELECT id, provider_id, encrypted_key, user_id FROM api_credentials WHERE is_active = true');
+    const { rows: keys } = await query('SELECT id, provider_id, encrypted_key, user_id, label FROM api_credentials WHERE is_active = true AND user_id = $1', [req.user.id]);
     const today = new Date().toISOString().split('T')[0];
-    const results = [];
-
-    for (const keyRow of keys) {
-      if (!keyRow.user_id) continue;
-
-      try {
-        const apiKey = decrypt(keyRow.encrypted_key);
-        let usage = null;
-        
-        if (keyRow.provider_id === 'openai') {
-          usage = await fetchOpenAIUsage(apiKey, today);
-        } else if (keyRow.provider_id === 'anthropic') {
-          usage = await fetchAnthropicUsage(apiKey, today);
-        }
-
-        if (usage) {
-          await query(`
-            INSERT INTO usage_snapshots (user_id, provider_id, snapshot_date, cost_usd, input_tokens, output_tokens, raw_response, model, project_tag)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            ON CONFLICT (user_id, provider_id, snapshot_date, model, project_tag) DO UPDATE
-            SET cost_usd = EXCLUDED.cost_usd, input_tokens = EXCLUDED.input_tokens, output_tokens = EXCLUDED.output_tokens, raw_response = EXCLUDED.raw_response, fetched_at = NOW()
-          `, [
-            keyRow.user_id, keyRow.provider_id, today, usage.cost_usd, 
-            usage.input_tokens || 0, usage.output_tokens || 0, 
-            usage.raw_response,
-            usage.model || 'default',
-            keyRow.label || 'default'
-          ]);
-          results.push({ provider: keyRow.provider_id, user_id: keyRow.user_id, status: 'success', cost: usage.cost_usd });
-        }
-      } catch (err: any) {
-        console.error(`Error polling ${keyRow.provider_id} for user ${keyRow.user_id}:`, err);
-        results.push({ provider: keyRow.provider_id, user_id: keyRow.user_id, status: 'error', error: err.message });
-      }
-    }
     
-    // Evaluate Budget Alerts
-    try {
-      const { rows: budgets } = await query('SELECT user_id, provider_id, monthly_limit_usd, alert_thresholds FROM budgets');
-      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-      const currentMonth = startOfMonth.substring(0, 7);
-
-      for (const budget of budgets) {
-        const { rows: spendRes } = await query(`
-          SELECT SUM(cost_usd) as total 
-          FROM usage_snapshots 
-          WHERE user_id = $1 AND provider_id = $2 AND snapshot_date >= $3
-        `, [budget.user_id, budget.provider_id, startOfMonth]);
-        
-        const totalSpend = Number(spendRes[0]?.total || 0);
-        const limit = Number(budget.monthly_limit_usd);
-        const thresholds = budget.alert_thresholds || [50, 80, 100];
-
-        for (const thresholdPercent of thresholds) {
-          const alertThreshold = limit * (thresholdPercent / 100);
-
-          if (totalSpend >= alertThreshold) {
-            // Check if alert already sent for this specific percentage threshold
-            const { rows: sent } = await query(`
-              SELECT id FROM alerts_sent 
-              WHERE user_id = $1 AND provider_id = $2 AND month = $3 AND alert_type = $4
-            `, [budget.user_id, budget.provider_id, currentMonth, `threshold_${thresholdPercent}`]);
-
-            if (sent.length === 0) {
-              const { rows: users } = await query('SELECT email FROM users WHERE id = $1', [budget.user_id]);
-              if (users[0]?.email && process.env.RESEND_API_KEY) {
-                await resend.emails.send({
-                  from: 'Watchdog Alerts <onboarding@resend.dev>',
-                  to: users[0].email,
-                  subject: `[Watchdog] ${budget.provider_id} Budget Alert (${thresholdPercent}%)`,
-                  html: `<p>Your ${budget.provider_id} spend has reached <strong>$${totalSpend.toFixed(2)}</strong>, which is over your alert threshold of ${thresholdPercent}% of your $${limit.toFixed(2)} monthly budget.</p>`
-                });
-                
-                await query(`
-                  INSERT INTO alerts_sent (user_id, provider_id, alert_type, month)
-                  VALUES ($1, $2, $3, $4)
-                `, [budget.user_id, budget.provider_id, `threshold_${thresholdPercent}`, currentMonth]);
-                console.log(`Alert sent to ${users[0].email} for ${budget.provider_id} at ${thresholdPercent}%`);
-              }
-            }
-          }
-        }
+    const jobs = keys.map(keyRow => ({
+      name: 'poll-usage',
+      data: {
+        keyId: keyRow.id,
+        provider_id: keyRow.provider_id,
+        encrypted_key: keyRow.encrypted_key,
+        user_id: keyRow.user_id,
+        label: keyRow.label,
+        today
       }
-    } catch (alertError) {
-      console.error('Error processing alerts:', alertError);
-    }
+    }));
 
-    res.json({ success: true, results });
+    if (jobs.length > 0) {
+        try { await pollingQueue.addBulk(jobs); } catch (e) { console.warn('Redis unavailable, job not queued'); }
+    }
+    res.json({ success: true, message: `Queued ${jobs.length} sync jobs for background processing.` });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Setup Cron Job for daily polling (runs at 11:50 PM every day)
-cron.schedule('50 23 * * *', async () => {
-  console.log('Running daily usage poll cron job...');
-  try {
-    await fetch('http://localhost:3000/api/cron/poll-usage');
-  } catch (e) {
-    console.error('Cron job fetch failed:', e);
+// Setup BullMQ Repeatable Job for daily polling (runs at 11:50 PM every day)
+pollingQueue.add('daily-system-sync', { type: 'system-wide' }, {
+  repeat: {
+    pattern: '50 23 * * *'
   }
 });
 
