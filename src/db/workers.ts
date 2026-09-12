@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger.js';
 import { Queue, Worker } from 'bullmq';
 import Redis from 'ioredis';
 import { query } from './index.js';
@@ -15,7 +16,7 @@ const connection = new Redis(redisUrl, {
   }
 });
 connection.on('error', (err) => {
-  console.warn('BullMQ Redis connection error (background workers disabled):', err.message);
+  logger.warn('BullMQ Redis connection error (background workers disabled):', err.message);
 });
 
 
@@ -29,7 +30,7 @@ export const alertsQueue = new Queue('budget-alerts', { connection });
 export const pollingWorker = new Worker('usage-polling', async job => {
   const { keyId, provider_id, encrypted_key, user_id, label, today } = job.data;
   
-  console.log(`Polling ${provider_id} for user ${user_id}`);
+  logger.info(`Polling ${provider_id} for user ${user_id}`);
   
   try {
     const apiKey = decrypt(encrypted_key);
@@ -61,7 +62,7 @@ export const pollingWorker = new Worker('usage-polling', async job => {
       return { status: 'success', cost: usage.cost_usd };
     }
   } catch (err: any) {
-    console.error(`Error polling ${provider_id} for user ${user_id}:`, err);
+    logger.error(`Error polling ${provider_id} for user ${user_id}:`, err);
     throw err;
   }
 }, { connection });
@@ -110,7 +111,7 @@ export const alertsWorker = new Worker('budget-alerts', async job => {
             VALUES ($1, $2, $3, $4)
           `, [user_id, provider_id, `threshold_${thresholdPercent}`, currentMonth]);
           
-          console.log(`Alert sent to ${users[0].email} for ${provider_id} at ${thresholdPercent}%`);
+          logger.info(`Alert sent to ${users[0].email} for ${provider_id} at ${thresholdPercent}%`);
         }
       }
     }
@@ -118,7 +119,7 @@ export const alertsWorker = new Worker('budget-alerts', async job => {
 }, { connection });
 
 
-pollingQueue.on('error', (err) => console.warn('pollingQueue error:', err.message));
-alertsQueue.on('error', (err) => console.warn('alertsQueue error:', err.message));
-pollingWorker.on('error', (err) => console.warn('pollingWorker error:', err.message));
-alertsWorker.on('error', (err) => console.warn('alertsWorker error:', err.message));
+pollingQueue.on('error', (err) => logger.warn('pollingQueue error:', err.message));
+alertsQueue.on('error', (err) => logger.warn('alertsQueue error:', err.message));
+pollingWorker.on('error', (err) => logger.warn('pollingWorker error:', err.message));
+alertsWorker.on('error', (err) => logger.warn('alertsWorker error:', err.message));

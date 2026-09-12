@@ -1,3 +1,5 @@
+import { setupSwagger } from './src/lib/swagger.js';
+import { logger } from './src/lib/logger.js';
 import express from 'express';
 import Redis from 'ioredis';
 import rateLimit from 'express-rate-limit';
@@ -22,7 +24,7 @@ const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
   }
 });
 redis.on('error', (err) => {
-  console.warn('Redis cache connection error (running without cache):', err.message);
+  logger.warn('Redis cache connection error (running without cache):', err.message);
 });
 
 
@@ -32,22 +34,23 @@ const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key');
 // Prevent Redis connection errors from crashing the app in development
 process.on('uncaughtException', (err: any) => {
   if (err.code === 'ECONNREFUSED' && err.port === 6379) {
-    console.warn('Ignored uncaught Redis connection error');
+    logger.warn('Ignored uncaught Redis connection error');
   } else {
-    console.error('Uncaught Exception:', err);
+    logger.error('Uncaught Exception:', err);
     process.exit(1);
   }
 });
 process.on('unhandledRejection', (reason: any) => {
   if (reason && reason.code === 'ECONNREFUSED' && reason.port === 6379) {
-    console.warn('Ignored unhandled Redis connection rejection');
+    logger.warn('Ignored unhandled Redis connection rejection');
   } else {
-    console.error('Unhandled Rejection:', reason);
+    logger.error('Unhandled Rejection:', reason);
   }
 });
 
 const app = express();
 app.use(express.json());
+  setupSwagger(app);
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -91,6 +94,28 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+
+/**
+ * @openapi
+ * /api/auth/login:
+ *   post:
+ *     summary: Authenticate user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ */
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -134,7 +159,7 @@ app.delete('/api/account', authenticateToken, async (req: any, res: any) => {
     await query('DELETE FROM users WHERE id = $1', [req.user.id]);
     res.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete account', error);
+    logger.error('Failed to delete account', error);
     res.status(500).json({ error: 'Failed to delete account' });
   }
 });
@@ -164,7 +189,7 @@ app.post('/api/keys', authenticateToken, async (req: any, res: any) => {
     );
     res.json({ success: true });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     res.status(500).json({ error: 'Failed to save key' });
   }
 });
@@ -288,7 +313,7 @@ app.post('/api/cron/trigger-sync', authenticateToken, async (req: any, res: any)
     }));
 
     if (jobs.length > 0) {
-        try { await pollingQueue.addBulk(jobs); } catch (e) { console.warn('Redis unavailable, job not queued'); }
+        try { await pollingQueue.addBulk(jobs); } catch (e) { logger.warn('Redis unavailable, job not queued'); }
     }
     res.json({ success: true, message: `Queued ${jobs.length} sync jobs for background processing.` });
   } catch (error: any) {
@@ -322,7 +347,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    logger.info(`Server running on http://localhost:${PORT}`);
   });
 }
 

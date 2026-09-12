@@ -3,6 +3,9 @@
 
 [![CI](https://github.com/musaibmanzoor/watchdog-api-vault/actions/workflows/main.yml/badge.svg)](https://github.com/musaibmanzoor/watchdog-api-vault/actions/workflows/main.yml)
 [![Docker Support](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
+[![Playwright E2E](https://img.shields.io/badge/playwright-tested-green.svg)](https://playwright.dev/)
+[![Drizzle ORM](https://img.shields.io/badge/drizzle-orm-yellow.svg)](https://orm.drizzle.team/)
+[![Swagger API Docs](https://img.shields.io/badge/swagger-api--docs-85EA2D.svg)](https://swagger.io/)
 [![Redis Caching](https://img.shields.io/badge/redis-caching-red.svg)](https://redis.io/)
 
 
@@ -46,6 +49,13 @@ graph TD
 - **AES-256-GCM** encryption ensures API keys are securely vaulted in the PostgreSQL database.
 
 ## Current features
+
+### Enterprise Code Quality
+* **Observability:** Centralized, structured logging implemented via Winston.
+* **API Documentation:** Interactive OpenAPI (Swagger) documentation automatically generated at `/api-docs`.
+* **Testing:** End-to-End (E2E) browser testing configured via Playwright alongside Jest unit tests.
+* **Database Migrations:** Schema definition and migrations managed safely using Drizzle ORM.
+
 
 ### Provider Support & Model-Level Analytics
 Watchdog tracks usage and billing across 10 major AI inference providers:
