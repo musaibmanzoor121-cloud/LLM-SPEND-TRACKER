@@ -204,6 +204,53 @@ app.delete('/api/keys/:id', authenticateToken, async (req: any, res: any) => {
 });
 
 
+
+/**
+ * @openapi
+ * /api/reports/csv:
+ *   get:
+ *     summary: Export monthly usage report as CSV
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: CSV file download
+ */
+app.get('/api/reports/csv', authenticateToken, async (req: any, res: any) => {
+  try {
+    const { rows } = await query(`
+      SELECT 
+        u.provider_id,
+        u.model,
+        SUM(u.cost_usd) as total_cost,
+        SUM(u.input_tokens) as total_input,
+        SUM(u.output_tokens) as total_output,
+        MAX(b.monthly_limit_usd) as budget_limit
+      FROM usage_snapshots u
+      LEFT JOIN budgets b ON u.provider_id = b.provider_id AND u.user_id = b.user_id
+      WHERE u.user_id = $1 
+        AND date_trunc('month', u.snapshot_date) = date_trunc('month', CURRENT_DATE)
+      GROUP BY u.provider_id, u.model
+      ORDER BY total_cost DESC
+    `, [req.user.id]);
+
+    const headers = ['Provider', 'Model', 'Total Cost (USD)', 'Input Tokens', 'Output Tokens', 'Monthly Budget Limit (USD)'];
+    const csvRows = [headers.join(',')];
+
+    for (const row of rows) {
+      csvRows.push(`${row.provider_id},${row.model || 'unknown'},${Number(row.total_cost).toFixed(4)},${row.total_input},${row.total_output},${row.budget_limit ? Number(row.budget_limit).toFixed(2) : 'N/A'}`);
+    }
+
+    res.header('Content-Type', 'text/csv');
+    res.attachment('watchdog-monthly-usage.csv');
+    return res.send(csvRows.join('\n'));
+  } catch (error) {
+    logger.error('CSV Export Error:', error);
+    res.status(500).json({ error: 'Failed to generate CSV report' });
+  }
+});
+
 app.get('/api/dashboard', authenticateToken, async (req: any, res: any) => {
   try {
     const { timeframe } = req.query;
@@ -279,14 +326,14 @@ app.get('/api/dashboard', authenticateToken, async (req: any, res: any) => {
 });
 
 app.post('/api/budgets', authenticateToken, async (req: any, res: any) => {
-  const { provider_id, limit, thresholds } = req.body;
+  const { provider_id, limit, thresholds, email_alerts, dashboard_alerts } = req.body;
   try {
     await query(`
-      INSERT INTO budgets (provider_id, monthly_limit_usd, user_id, alert_thresholds)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO budgets (provider_id, monthly_limit_usd, user_id, alert_thresholds, email_alerts_enabled, dashboard_alerts_enabled)
+      VALUES ($1, $2, $3, $4, $5, $6)
       ON CONFLICT (user_id, provider_id) DO UPDATE 
-      SET monthly_limit_usd = $2, alert_thresholds = $4, updated_at = NOW()
-    `, [provider_id, limit, req.user.id, thresholds || [50, 80, 100]]);
+      SET monthly_limit_usd = $2, alert_thresholds = $4, email_alerts_enabled = $5, dashboard_alerts_enabled = $6, updated_at = NOW()
+    `, [provider_id, limit, req.user.id, thresholds || [50, 80, 100], email_alerts !== false, dashboard_alerts !== false]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to save budget' });

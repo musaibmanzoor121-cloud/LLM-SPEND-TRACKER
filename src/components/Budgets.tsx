@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Settings } from 'lucide-react';
+import AlertThresholdsConfig from './AlertThresholdsConfig';
 
 interface Budget {
   provider_id: string;
@@ -12,6 +13,8 @@ export default function Budgets() {
   const [providerId, setProviderId] = useState('openai');
   const [limit, setLimit] = useState('');
   const [thresholdsStr, setThresholdsStr] = useState('50, 80, 100');
+  const [emailAlerts, setEmailAlerts] = useState(true);
+  const [dashboardAlerts, setDashboardAlerts] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const fetchBudgets = async () => {
@@ -49,7 +52,7 @@ export default function Budgets() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('watchdog_token')}`
         },
-        body: JSON.stringify({ provider_id: providerId, limit: Number(limit), thresholds })
+        body: JSON.stringify({ provider_id: providerId, limit: Number(limit), thresholds, email_alerts: emailAlerts, dashboard_alerts: dashboardAlerts })
       });
       if (res.ok) {
         setLimit('');
@@ -139,6 +142,7 @@ export default function Budgets() {
               <th className="px-6 py-4 text-xs text-white/40 uppercase tracking-widest font-medium">Provider</th>
               <th className="px-6 py-4 text-xs text-white/40 uppercase tracking-widest font-medium">Monthly Limit</th>
               <th className="px-6 py-4 text-xs text-white/40 uppercase tracking-widest font-medium">Alerts At</th>
+              <th className="px-6 py-4 text-xs text-white/40 uppercase tracking-widest font-medium">Channels</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -153,6 +157,12 @@ export default function Budgets() {
                   <td className="px-6 py-4 font-mono text-[#3DDC97] text-sm">${Number(budget.monthly_limit_usd).toFixed(2)}</td>
                   <td className="px-6 py-4 text-white/60 text-sm font-mono">
                     {budget.alert_thresholds ? budget.alert_thresholds.join('%, ') + '%' : '50%, 80%, 100%'}
+                  </td>
+                  <td className="px-6 py-4 text-white/60 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${budget.email_alerts_enabled ? 'bg-[#3DDC97]' : 'bg-white/20'}`} title="Email" />
+                      <div className={`w-2 h-2 rounded-full ${budget.dashboard_alerts_enabled ? 'bg-[#3DDC97]' : 'bg-white/20'}`} title="Dashboard" />
+                    </div>
                   </td>
                 </tr>
               ))
