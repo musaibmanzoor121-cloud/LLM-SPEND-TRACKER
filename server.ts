@@ -312,7 +312,59 @@ app.get('/api/dashboard', authenticateToken, async (req: any, res: any) => {
       ORDER BY total_cost DESC
     `, [startStr, endStr, req.user.id]);
 
-    const responseData = { budgets, spendData, dailyTrend, modelBreakdown, timeframe: timeframe || 'this_month' };
+    // Query active keys statistics
+    const { rows: keyStats } = await query(
+      `SELECT 
+        COUNT(*) FILTER (WHERE is_active = true) as active_keys,
+        COUNT(*) as total_keys
+       FROM api_credentials 
+       WHERE user_id = $1`,
+      [req.user.id]
+    );
+
+    // Query alerts statistics
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    const { rows: alertStats } = await query(
+      `SELECT 
+        COUNT(*) as total_alerts,
+        COUNT(*) FILTER (WHERE month = $2) as month_alerts
+       FROM alerts_sent 
+       WHERE user_id = $1`,
+      [req.user.id, currentMonth]
+    );
+
+    // Calculate real-time budget threshold warnings
+    let activeThresholdBreaches = 0;
+    for (const b of budgets) {
+      const pSpend = spendData
+        .filter((s: any) => s.provider_id === b.provider_id)
+        .reduce((acc: number, curr: any) => acc + Number(curr.total_spend || 0), 0);
+      const limit = Number(b.monthly_limit_usd || 0);
+      const thresholds = Array.isArray(b.alert_thresholds) ? b.alert_thresholds : [50, 80, 100];
+      if (limit > 0) {
+        for (const t of thresholds) {
+          if (pSpend >= (limit * Number(t) / 100)) {
+            activeThresholdBreaches++;
+          }
+        }
+      }
+    }
+
+    const totalKeysActive = parseInt(keyStats[0]?.active_keys || '0', 10);
+    const totalKeys = parseInt(keyStats[0]?.total_keys || '0', 10);
+    const monthAlertsSent = parseInt(alertStats[0]?.month_alerts || '0', 10);
+    const totalAlertsSent = parseInt(alertStats[0]?.total_alerts || '0', 10);
+    const alertsTriggered = Math.max(activeThresholdBreaches, monthAlertsSent);
+
+    const stats = {
+      totalKeysActive,
+      totalKeys,
+      alertsTriggered,
+      alertsSentCount: totalAlertsSent,
+      activeThresholdBreaches
+    };
+
+    const responseData = { budgets, spendData, dailyTrend, modelBreakdown, stats, timeframe: timeframe || 'this_month' };
     
     // Cache for 15 minutes
     if (redis.status === 'ready') {
@@ -369,7 +421,7 @@ app.post('/api/cron/trigger-sync', authenticateToken, async (req: any, res: any)
 });
 
 // Setup BullMQ Repeatable Job for daily polling (runs at 11:50 PM every day)
-pollingQueue.add('daily-system-sync', { type: 'system-wide' }, {
+(pollingQueue as any).add('daily-system-sync', { type: 'system-wide' }, {
   repeat: {
     pattern: '50 23 * * *'
   }

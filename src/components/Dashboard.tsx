@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { format } from 'date-fns';
 import { RefreshCw, Download } from 'lucide-react';
+import SummaryCards, { SummaryStats } from './SummaryCards';
 
 interface SpendData {
   provider_id: string;
@@ -26,6 +27,13 @@ export default function Dashboard() {
     spendData: SpendData[];
     dailyTrend: any[];
     modelBreakdown: ModelBreakdown[];
+    stats?: {
+      totalKeysActive: number;
+      totalKeys: number;
+      alertsTriggered: number;
+      alertsSentCount: number;
+      activeThresholdBreaches: number;
+    };
   } | null>(null);
   const [polling, setPolling] = useState(false);
 
@@ -97,8 +105,40 @@ export default function Dashboard() {
 
   const totalSpendMTD = data?.spendData.reduce((acc, curr) => acc + Number(curr.total_spend), 0) || 0;
   const daysInMonth = new Date().getDate();
-  const dailyAverage = totalSpendMTD / daysInMonth || 0;
-  const estimatedEOM = dailyAverage * new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const dailyAverage = totalSpendMTD / (daysInMonth || 1);
+  const totalDaysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const projectedSpend = dailyAverage * totalDaysInMonth;
+  const totalBudgetLimit = data?.budgets.reduce((acc, curr) => acc + Number(curr.monthly_limit_usd || 0), 0) || 0;
+
+  // Real-time calculated threshold breaches fallback
+  let calculatedBreaches = 0;
+  if (data?.budgets && data?.spendData) {
+    for (const b of data.budgets) {
+      const pSpend = data.spendData
+        .filter((s) => s.provider_id === b.provider_id)
+        .reduce((acc, curr) => acc + Number(curr.total_spend || 0), 0);
+      const limit = Number(b.monthly_limit_usd || 0);
+      const thresholds = (b as any).alert_thresholds || [50, 80, 100];
+      if (limit > 0) {
+        for (const t of thresholds) {
+          if (pSpend >= (limit * Number(t) / 100)) {
+            calculatedBreaches++;
+          }
+        }
+      }
+    }
+  }
+
+  const summaryStats: SummaryStats = {
+    totalKeysActive: data?.stats?.totalKeysActive ?? 0,
+    totalKeys: data?.stats?.totalKeys ?? 0,
+    projectedSpend,
+    totalSpendMTD,
+    dailyAverage,
+    alertsTriggered: data?.stats?.alertsTriggered ?? calculatedBreaches,
+    totalBudgetLimit,
+    activeThresholdBreaches: data?.stats?.activeThresholdBreaches ?? calculatedBreaches,
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -138,23 +178,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gradient-to-b from-white/[0.03] to-transparent p-8 rounded-2xl border border-white/5 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#3DDC97] to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
-          <p className="text-[11px] text-white/40 uppercase tracking-widest mb-3 font-semibold">Total Spend</p>
-          <p className="text-5xl font-heading font-light text-white tracking-tight">${totalSpendMTD.toFixed(2)}</p>
-        </div>
-        <div className="bg-gradient-to-b from-white/[0.03] to-transparent p-8 rounded-2xl border border-white/5 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
-          <p className="text-[11px] text-white/40 uppercase tracking-widest mb-3 font-semibold">Daily Average</p>
-          <p className="text-5xl font-heading font-light text-white tracking-tight">${dailyAverage.toFixed(2)}</p>
-        </div>
-        <div className="bg-gradient-to-b from-white/[0.03] to-transparent p-8 rounded-2xl border border-white/5 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
-          <p className="text-[11px] text-white/40 uppercase tracking-widest mb-3 font-semibold">Estimated EOM Bill</p>
-          <p className="text-5xl font-heading font-light text-white tracking-tight">${estimatedEOM.toFixed(2)}</p>
-        </div>
-      </div>
+      <SummaryCards stats={summaryStats} timeframe={timeframe} />
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 flex-grow">
         <div className="lg:col-span-2 flex flex-col gap-6">

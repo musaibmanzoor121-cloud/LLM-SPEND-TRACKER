@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "Watchdog - API Spend Intelligence",
+  "description": "Real-time AI API spend tracking, budget thresholds, and cost intelligence vault.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
