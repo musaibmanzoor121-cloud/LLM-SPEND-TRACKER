@@ -1,3 +1,8 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { logger } from '../lib/logger.js';
 import { Queue, Worker } from 'bullmq';
 import Redis from 'ioredis';
@@ -7,28 +12,11 @@ import { fetchOpenAIUsage } from '../lib/providers/openai.js';
 import { fetchAnthropicUsage } from '../lib/providers/anthropic.js';
 import { Resend } from 'resend';
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-const connection = new Redis(redisUrl, { 
-  maxRetriesPerRequest: null,
-  retryStrategy(times) {
-    if (times > 3) return null;
-    return Math.min(times * 50, 2000);
-  }
-});
-connection.on('error', (err) => {
-  logger.warn('BullMQ Redis connection error (background workers disabled):', err.message);
-});
-
-
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key');
 
-// 1. Create Queues
-export const pollingQueue = new Queue('usage-polling', { connection });
-export const alertsQueue = new Queue('budget-alerts', { connection });
-
-// 2. Worker for individual provider polling
-export const pollingWorker = new Worker('usage-polling', async job => {
-  const { keyId, provider_id, encrypted_key, user_id, label, today } = job.data;
+// Core execution logic for polling an individual provider credential
+export async function processPollJob(data: any) {
+  const { provider_id, encrypted_key, user_id, label, today } = data;
   
   logger.info(`Polling ${provider_id} for user ${user_id}`);
   
@@ -56,7 +44,7 @@ export const pollingWorker = new Worker('usage-polling', async job => {
         label || 'default'
       ]);
       
-      // Enqueue an alert evaluation for this user and provider
+      // Trigger budget alert evaluation for this user and provider
       await alertsQueue.add('evaluate-alerts', { user_id, provider_id });
       
       return { status: 'success', cost: usage.cost_usd };
@@ -65,15 +53,18 @@ export const pollingWorker = new Worker('usage-polling', async job => {
     logger.error(`Error polling ${provider_id} for user ${user_id}:`, err);
     throw err;
   }
-}, { connection });
+}
 
-// 3. Worker for budget alerts
-export const alertsWorker = new Worker('budget-alerts', async job => {
-  const { user_id, provider_id } = job.data;
+// Core execution logic for budget threshold alerts
+export async function processAlertJob(data: any) {
+  const { user_id, provider_id } = data;
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
   const currentMonth = startOfMonth.substring(0, 7);
 
-  const { rows: budgets } = await query('SELECT monthly_limit_usd, alert_thresholds FROM budgets WHERE user_id = $1 AND provider_id = $2', [user_id, provider_id]);
+  const { rows: budgets } = await query(
+    'SELECT monthly_limit_usd, alert_thresholds FROM budgets WHERE user_id = $1 AND provider_id = $2',
+    [user_id, provider_id]
+  );
   
   if (budgets.length === 0) return;
   const budget = budgets[0];
@@ -116,10 +107,79 @@ export const alertsWorker = new Worker('budget-alerts', async job => {
       }
     }
   }
-}, { connection });
+}
 
+// Check if external Redis is explicitly configured
+const isRedisConfigured = Boolean(process.env.REDIS_URL && process.env.REDIS_URL.trim().length > 0);
 
-pollingQueue.on('error', (err) => logger.warn('pollingQueue error:', err.message));
-alertsQueue.on('error', (err) => logger.warn('alertsQueue error:', err.message));
-pollingWorker.on('error', (err) => logger.warn('pollingWorker error:', err.message));
-alertsWorker.on('error', (err) => logger.warn('alertsWorker error:', err.message));
+export let pollingQueue: any;
+export let alertsQueue: any;
+export let pollingWorker: any = null;
+export let alertsWorker: any = null;
+
+if (isRedisConfigured) {
+  const connection = new Redis(process.env.REDIS_URL!, { 
+    maxRetriesPerRequest: null,
+    retryStrategy(times) {
+      if (times > 3) return null;
+      return Math.min(times * 100, 2000);
+    }
+  });
+
+  connection.on('error', (err) => {
+    logger.debug('BullMQ Redis connection error (background workers fallback to in-memory):', err.message);
+  });
+
+  pollingQueue = new Queue('usage-polling', { connection });
+  alertsQueue = new Queue('budget-alerts', { connection });
+
+  pollingWorker = new Worker('usage-polling', async job => {
+    return processPollJob(job.data);
+  }, { connection });
+
+  alertsWorker = new Worker('budget-alerts', async job => {
+    return processAlertJob(job.data);
+  }, { connection });
+
+  pollingQueue.on('error', (err: any) => logger.debug('pollingQueue error:', err?.message));
+  alertsQueue.on('error', (err: any) => logger.debug('alertsQueue error:', err?.message));
+  pollingWorker.on('error', (err: any) => logger.debug('pollingWorker error:', err?.message));
+  alertsWorker.on('error', (err: any) => logger.debug('alertsWorker error:', err?.message));
+} else {
+  // Graceful in-memory queue adapter when REDIS_URL is not provided
+  pollingQueue = {
+    add: async (name: string, data: any, opts?: any) => {
+      setImmediate(() => {
+        processPollJob(data).catch(err => {
+          logger.warn('In-memory polling job error:', err?.message || err);
+        });
+      });
+      return { id: `mem-poll-${Date.now()}` };
+    },
+    addBulk: async (jobs: Array<{ name: string; data: any }>) => {
+      setImmediate(async () => {
+        for (const job of jobs) {
+          try {
+            await processPollJob(job.data);
+          } catch (err: any) {
+            logger.warn('In-memory bulk polling job error:', err?.message || err);
+          }
+        }
+      });
+      return jobs.map((_, idx) => ({ id: `mem-bulk-${Date.now()}-${idx}` }));
+    },
+    on: () => pollingQueue,
+  };
+
+  alertsQueue = {
+    add: async (name: string, data: any) => {
+      setImmediate(() => {
+        processAlertJob(data).catch(err => {
+          logger.warn('In-memory alert job error:', err?.message || err);
+        });
+      });
+      return { id: `mem-alert-${Date.now()}` };
+    },
+    on: () => alertsQueue,
+  };
+}

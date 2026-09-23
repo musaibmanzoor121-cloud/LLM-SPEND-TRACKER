@@ -26,16 +26,42 @@ const ai = new GoogleGenAI({
 
 
 
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', { 
-  maxRetriesPerRequest: null,
-  retryStrategy(times) {
-    if (times > 3) return null; // Stop retrying after 3 attempts
-    return Math.min(times * 50, 2000);
+// In-memory cache implementation when external Redis is not configured
+class MemoryCache {
+  private store = new Map<string, { val: string; exp: number }>();
+  get status() { return 'ready'; }
+  async get(key: string): Promise<string | null> {
+    const item = this.store.get(key);
+    if (!item) return null;
+    if (Date.now() > item.exp) {
+      this.store.delete(key);
+      return null;
+    }
+    return item.val;
   }
-});
-redis.on('error', (err) => {
-  logger.warn('Redis cache connection error (running without cache):', err.message);
-});
+  async setex(key: string, seconds: number, val: string): Promise<void> {
+    this.store.set(key, { val, exp: Date.now() + seconds * 1000 });
+  }
+  on() { return this; }
+}
+
+const isRedisConfigured = Boolean(process.env.REDIS_URL && process.env.REDIS_URL.trim().length > 0);
+
+const redis: any = isRedisConfigured
+  ? new Redis(process.env.REDIS_URL!, { 
+      maxRetriesPerRequest: null,
+      retryStrategy(times) {
+        if (times > 3) return null;
+        return Math.min(times * 100, 2000);
+      }
+    })
+  : new MemoryCache();
+
+if (isRedisConfigured) {
+  redis.on('error', (err: any) => {
+    logger.debug('Redis cache connection error:', err?.message);
+  });
+}
 
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key');
@@ -654,10 +680,30 @@ const handleSync = async (req: any, res: any) => {
 app.post('/api/cron/trigger-sync', authenticateToken, handleSync);
 app.all('/api/cron/poll-usage', authenticateToken, handleSync);
 
-// Setup BullMQ Repeatable Job for daily polling (runs at 11:50 PM every day)
-(pollingQueue as any).add('daily-system-sync', { type: 'system-wide' }, {
-  repeat: {
-    pattern: '50 23 * * *'
+// Schedule daily automated synchronization at 11:50 PM every day
+cron.schedule('50 23 * * *', async () => {
+  try {
+    logger.info('Running daily automated usage synchronization...');
+    const { rows: keys } = await query(
+      'SELECT id, provider_id, encrypted_key, user_id, label FROM api_credentials WHERE is_active = true'
+    );
+    const today = new Date().toISOString().split('T')[0];
+    const jobs = keys.map(keyRow => ({
+      name: 'poll-usage',
+      data: {
+        keyId: keyRow.id,
+        provider_id: keyRow.provider_id,
+        encrypted_key: keyRow.encrypted_key,
+        user_id: keyRow.user_id,
+        label: keyRow.label,
+        today
+      }
+    }));
+    if (jobs.length > 0) {
+      await pollingQueue.addBulk(jobs);
+    }
+  } catch (err: any) {
+    logger.warn('Scheduled daily sync failed:', err?.message || err);
   }
 });
 
