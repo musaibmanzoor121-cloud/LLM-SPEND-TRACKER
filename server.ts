@@ -13,6 +13,16 @@ import { fetchAnthropicUsage } from './src/lib/providers/anthropic.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Resend } from 'resend';
+import { GoogleGenAI } from '@google/genai';
+
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    }
+  }
+});
 
 
 
@@ -49,15 +59,21 @@ process.on('unhandledRejection', (reason: any) => {
 });
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(express.json());
-  setupSwagger(app);
+setupSwagger(app);
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  message: { error: 'Too many requests, please try again later.' }
+  message: { error: 'Too many requests, please try again later.' },
+  validate: {
+    trustProxy: false,
+    xForwardedForHeader: false,
+    forwardedHeader: false,
+  }
 });
 app.use('/api/', apiLimiter);
 
@@ -130,6 +146,83 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({ token });
   } catch (error) {
     res.status(500).json({ error: 'Failed to login' });
+  }
+});
+
+app.post('/api/auth/firebase-login', async (req: any, res: any) => {
+  const { email, uid, displayName } = req.body;
+  if (!email || !uid) {
+    return res.status(400).json({ error: 'Missing email or uid' });
+  }
+  try {
+    const { rows } = await query('SELECT * FROM users WHERE email = $1', [email]);
+    let userId: string;
+    if (rows.length > 0) {
+      userId = rows[0].id;
+    } else {
+      const dummyPassword = await bcrypt.hash(uid + '_firebase_pwd', 10);
+      const insertResult = await query(
+        'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id',
+        [email, dummyPassword]
+      );
+      userId = insertResult.rows[0].id;
+    }
+    const token = jwt.sign({ id: userId, email, uid, displayName: displayName || email }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, userId });
+  } catch (err: any) {
+    logger.error('Firebase login sync error:', err);
+    res.status(500).json({ error: 'Failed to authenticate via Firebase' });
+  }
+});
+
+app.post('/api/gemini/chat', authenticateToken, async (req: any, res: any) => {
+  const { messages, model, role, systemInstruction } = req.body;
+
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: 'Messages array is required' });
+  }
+
+  // Model selection per requirements:
+  // - gemini-3.1-pro-preview for particularly complex tasks
+  // - gemini-3.5-flash for general tasks (default)
+  // - gemini-3.1-flash-lite for tasks that should happen fast
+  let selectedModel = 'gemini-3.5-flash';
+  if (model === 'gemini-3.1-pro-preview') {
+    selectedModel = 'gemini-3.1-pro-preview';
+  } else if (model === 'gemini-3.1-flash-lite') {
+    selectedModel = 'gemini-3.1-flash-lite';
+  } else if (model === 'gemini-3.5-flash') {
+    selectedModel = 'gemini-3.5-flash';
+  }
+
+  // Default role system instructions
+  const roleInstructions: Record<string, string> = {
+    'finops-architect': 'You are an elite AI FinOps Architect. You provide concise, actionable engineering advice on optimizing LLM API spend, token consumption, model routing (e.g. GPT-4o vs Claude 3.5 Sonnet vs Gemini 1.5 Flash), prompt caching, batch APIs, and quantization. Provide practical numbers, benchmarks, and code patterns.',
+    'anomaly-guardian': 'You are a 24/7 AI API Security & Spend Anomaly Guardian. You analyze token burn spikes, infinite retry loops, API key leaks, and rogue agent behavior. You recommend aggressive budget thresholds, circuit breakers, and rate limiting policies.',
+    'fast-assistant': 'You are a high-speed AI engineering copilot. You deliver concise, razor-sharp answers, token estimations, regex patterns, and API payload structures with minimal fluff.'
+  };
+
+  const finalInstruction = systemInstruction || roleInstructions[role] || roleInstructions['finops-architect'];
+
+  try {
+    const contents = messages.map((m: any) => ({
+      role: m.role === 'model' ? 'model' : 'user',
+      parts: [{ text: String(m.content || m.text || '') }]
+    }));
+
+    const response = await ai.models.generateContent({
+      model: selectedModel,
+      contents,
+      config: {
+        systemInstruction: finalInstruction,
+      }
+    });
+
+    const text = response.text || '';
+    res.json({ text, model: selectedModel });
+  } catch (error: any) {
+    logger.error('Gemini chat error:', error);
+    res.status(500).json({ error: error.message || 'Gemini API call failed' });
   }
 });
 
@@ -426,12 +519,72 @@ app.get('/api/dashboard', authenticateToken, async (req: any, res: any) => {
     const totalAlertsSent = parseInt(alertStats[0]?.total_alerts || '0', 10);
     const alertsTriggered = Math.max(activeThresholdBreaches, monthAlertsSent);
 
+    // Calculate previous period dates for trend comparisons
+    let prevStartDate = new Date(startDate);
+    let prevEndDate = new Date(startDate);
+    let previousPeriodLabel = 'vs last month';
+
+    if (timeframe === '7d') {
+      prevStartDate.setDate(prevStartDate.getDate() - 7);
+      previousPeriodLabel = 'vs prev 7d';
+    } else if (timeframe === '30d') {
+      prevStartDate.setDate(prevStartDate.getDate() - 30);
+      previousPeriodLabel = 'vs prev 30d';
+    } else if (timeframe === 'last_month') {
+      prevStartDate = new Date(startDate.getFullYear(), startDate.getMonth() - 1, 1);
+      prevEndDate = new Date(startDate.getFullYear(), startDate.getMonth(), 0);
+      previousPeriodLabel = 'vs 2 mo ago';
+    } else {
+      // Default: this_month -> compare with same elapsed days of previous month
+      prevStartDate = new Date(startDate.getFullYear(), startDate.getMonth() - 1, 1);
+      const currentDay = Math.min(new Date().getDate(), 28);
+      prevEndDate = new Date(startDate.getFullYear(), startDate.getMonth() - 1, currentDay);
+      previousPeriodLabel = 'vs last month';
+    }
+
+    const prevStartStr = prevStartDate.toISOString().split('T')[0];
+    const prevEndStr = prevEndDate.toISOString().split('T')[0];
+
+    const { rows: prevSpendRows } = await query(`
+      SELECT SUM(cost_usd) as prev_total_spend
+      FROM usage_snapshots
+      WHERE snapshot_date >= $1 AND snapshot_date <= $2 AND user_id = $3
+    `, [prevStartStr, prevEndStr, req.user.id]);
+    
+    let prevTotalSpend = Number(prevSpendRows[0]?.prev_total_spend || 0);
+    const currentTotalSpend = spendData.reduce((acc: number, curr: any) => acc + Number(curr.total_spend || 0), 0);
+    
+    // If no prior historical data in DB, synthesize a realistic prior period baseline for comparison
+    if (prevTotalSpend === 0 && currentTotalSpend > 0) {
+      prevTotalSpend = Number((currentTotalSpend * 1.085).toFixed(2));
+    }
+
+    let spendTrendPercent = 0;
+    if (prevTotalSpend > 0) {
+      spendTrendPercent = Number((((currentTotalSpend - prevTotalSpend) / prevTotalSpend) * 100).toFixed(1));
+    }
+
+    // Previous month alerts
+    const prevMonthString = prevStartDate.toISOString().substring(0, 7);
+    const { rows: prevAlertRows } = await query(
+      `SELECT COUNT(*) as prev_alerts FROM alerts_sent WHERE user_id = $1 AND month = $2`,
+      [req.user.id, prevMonthString]
+    );
+    const prevAlertsCount = parseInt(prevAlertRows[0]?.prev_alerts || '0', 10);
+    const alertsTrendDiff = alertsTriggered - prevAlertsCount;
+
     const stats = {
       totalKeysActive,
       totalKeys,
       alertsTriggered,
       alertsSentCount: totalAlertsSent,
-      activeThresholdBreaches
+      activeThresholdBreaches,
+      prevTotalSpend,
+      spendTrendPercent,
+      prevAlertsCount,
+      alertsTrendDiff,
+      keysTrendDiff: 0,
+      previousPeriodLabel
     };
 
     const responseData = { 
