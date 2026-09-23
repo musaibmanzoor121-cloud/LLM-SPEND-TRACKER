@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { format } from 'date-fns';
 import { RefreshCw, Download } from 'lucide-react';
 import SummaryCards, { SummaryStats } from './SummaryCards';
+import TokenConsumptionChart from './TokenConsumptionChart';
 
 interface SpendData {
   provider_id: string;
@@ -26,6 +27,7 @@ export default function Dashboard() {
     budgets: Budget[];
     spendData: SpendData[];
     dailyTrend: any[];
+    dailyTokenTrend?: any[];
     modelBreakdown: ModelBreakdown[];
     stats?: {
       totalKeysActive: number;
@@ -75,10 +77,13 @@ export default function Dashboard() {
 
   const exportToCSV = () => {
     if (!data) return;
-    const headers = ['Date', 'Provider', 'Cost (USD)'];
-    const rows = data.dailyTrend.map(row => 
-      `${new Date(row.snapshot_date).toISOString().split('T')[0]},${row.provider_id},${row.cost}`
-    );
+    const headers = ['Date', 'Provider', 'Cost (USD)', 'Input Tokens', 'Output Tokens', 'Total Tokens'];
+    const rows = (data.dailyTrend || []).map(row => {
+      const input = row.input_tokens ? Number(row.input_tokens) : 0;
+      const output = row.output_tokens ? Number(row.output_tokens) : 0;
+      const total = row.total_tokens ? Number(row.total_tokens) : (input + output);
+      return `${new Date(row.snapshot_date).toISOString().split('T')[0]},${row.provider_id},${row.cost},${input},${output},${total}`;
+    });
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -263,6 +268,11 @@ export default function Dashboard() {
         </div>
       </div>
       
+      {/* Daily API Token Consumption Line Chart (Last 30 Days) */}
+      <div className="mt-8">
+        <TokenConsumptionChart data={data?.dailyTokenTrend || []} isLoading={loading} />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <div className="bg-white/5 p-6 rounded-xl border border-white/10">
           <h2 className="text-xs text-white/40 uppercase tracking-widest font-medium mb-6">Model Breakdown</h2>
