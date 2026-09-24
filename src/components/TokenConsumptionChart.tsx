@@ -169,9 +169,9 @@ export default function TokenConsumptionChart({ data, isLoading }: TokenConsumpt
   const outputPercent = totalTokens > 0 ? 100 - inputPercent : 30;
 
   return (
-    <div id="token-consumption-card" className="card-3d bg-white p-6 sm:p-8 rounded-2xl flex flex-col mb-8 relative overflow-hidden group">
+    <div id="token-consumption-card" className="card-3d bg-[#F8F9FB] p-6 sm:p-8 rounded-2xl flex flex-col mb-8 relative overflow-hidden group">
       {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-100">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-200/80">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_2px_4px_rgba(99,102,241,0.1)]">
             <Cpu size={20} />
@@ -179,7 +179,7 @@ export default function TokenConsumptionChart({ data, isLoading }: TokenConsumpt
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-heading font-bold text-slate-900 tracking-tight">Daily API Token Consumption</h2>
-              <span className="text-[10px] uppercase px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-semibold tracking-wider">
+              <span className="text-[10px] uppercase px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-semibold tracking-wider">
                 Last 30 Days
               </span>
             </div>
@@ -190,13 +190,13 @@ export default function TokenConsumptionChart({ data, isLoading }: TokenConsumpt
         </div>
 
         {/* Toggle controls */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/70 self-start md:self-auto shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center gap-1 bg-[#E2E6ED] p-1 rounded-xl border border-slate-300/80 self-start md:self-auto shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]">
           <button
             type="button"
             onClick={() => setViewMode('type')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               viewMode === 'type'
-                ? 'bg-white text-slate-900 shadow-[0_2px_4px_rgba(0,0,0,0.06)] border border-slate-200/60'
+                ? 'bg-[#F8F9FB] text-slate-900 shadow-sm border border-slate-300/70'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -206,9 +206,9 @@ export default function TokenConsumptionChart({ data, isLoading }: TokenConsumpt
           <button
             type="button"
             onClick={() => setViewMode('provider')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               viewMode === 'provider'
-                ? 'bg-white text-slate-900 shadow-[0_2px_4px_rgba(0,0,0,0.06)] border border-slate-200/60'
+                ? 'bg-[#F8F9FB] text-slate-900 shadow-sm border border-slate-300/70'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -218,35 +218,35 @@ export default function TokenConsumptionChart({ data, isLoading }: TokenConsumpt
         </div>
       </div>
 
-      {/* KPI Stats Pill Grid */}
+      {/* KPI Stats Grid in Soft Gray Wells */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <div className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-xl flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-          <span className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">30-Day Volume</span>
+        <div className="well-gray p-3.5 rounded-xl flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+          <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">30-Day Volume</span>
           <span className="text-2xl font-heading font-bold text-slate-900 mt-1">{formatTokens(totalTokens)}</span>
           <span className="text-[11px] text-slate-500 mt-0.5">total tokens consumed</span>
         </div>
 
-        <div className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-xl flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-          <span className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Daily Burn Rate</span>
+        <div className="well-gray p-3.5 rounded-xl flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+          <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Daily Burn Rate</span>
           <span className="text-2xl font-heading font-bold text-indigo-600 mt-1">{formatTokens(avgDaily)}</span>
           <span className="text-[11px] text-slate-500 mt-0.5">tokens / day average</span>
         </div>
 
-        <div className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-xl flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-          <span className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Type Distribution</span>
+        <div className="well-gray p-3.5 rounded-xl flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+          <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Type Distribution</span>
           <div className="flex items-center gap-2 mt-1">
             <span className="text-sm font-semibold text-indigo-600">{inputPercent}% In</span>
             <span className="text-slate-300 text-xs">•</span>
             <span className="text-sm font-semibold text-violet-600">{outputPercent}% Out</span>
           </div>
-          <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden mt-1.5 flex">
+          <div className="w-full h-1.5 bg-slate-300/80 rounded-full overflow-hidden mt-1.5 flex">
             <div className="bg-indigo-600 h-full" style={{ width: `${inputPercent}%` }} />
             <div className="bg-violet-500 h-full" style={{ width: `${outputPercent}%` }} />
           </div>
         </div>
 
-        <div className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-xl flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-          <span className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Peak Day</span>
+        <div className="well-gray p-3.5 rounded-xl flex flex-col shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+          <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Peak Day</span>
           <span className="text-2xl font-heading font-bold text-emerald-600 mt-1">
             {peakDay ? formatTokens(peakDay.totalTokens) : '0'}
           </span>
@@ -260,7 +260,7 @@ export default function TokenConsumptionChart({ data, isLoading }: TokenConsumpt
       <div className="h-[300px] w-full relative">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 10, right: 15, left: -10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
             <XAxis
               dataKey="displayDate"
               stroke="#94A3B8"
@@ -279,8 +279,8 @@ export default function TokenConsumptionChart({ data, isLoading }: TokenConsumpt
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#FFFFFF',
-                borderColor: '#E2E8F0',
+                backgroundColor: '#F8F9FB',
+                borderColor: '#CBD5E1',
                 color: '#0F172A',
                 borderRadius: '12px',
                 boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.1)',

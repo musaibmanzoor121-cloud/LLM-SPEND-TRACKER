@@ -42,6 +42,9 @@ class MemoryCache {
   async setex(key: string, seconds: number, val: string): Promise<void> {
     this.store.set(key, { val, exp: Date.now() + seconds * 1000 });
   }
+  async del(key: string): Promise<void> {
+    this.store.delete(key);
+  }
   on() { return this; }
 }
 
@@ -403,7 +406,7 @@ app.get('/api/dashboard', authenticateToken, async (req: any, res: any) => {
     const endStr = endDate.toISOString().split('T')[0];
 
     // Get budgets
-    const { rows: budgets } = await query('SELECT provider_id, monthly_limit_usd, alert_thresholds FROM budgets WHERE user_id = $1', [req.user.id]);
+    const { rows: budgets } = await query('SELECT provider_id, monthly_limit_usd, alert_thresholds, alert_at_percent, email_alerts_enabled, dashboard_alerts_enabled FROM budgets WHERE user_id = $1', [req.user.id]);
     
     // Get spend per provider
     const { rows: spendData } = await query(`
@@ -635,15 +638,28 @@ app.get('/api/dashboard', authenticateToken, async (req: any, res: any) => {
 });
 
 app.post('/api/budgets', authenticateToken, async (req: any, res: any) => {
-  const { provider_id, limit, thresholds, email_alerts, dashboard_alerts } = req.body;
+  const { provider_id, limit, thresholds, alert_at_percent, email_alerts, dashboard_alerts } = req.body;
+  const primaryThreshold = alert_at_percent ? parseInt(alert_at_percent, 10) : (Array.isArray(thresholds) && thresholds.length > 0 ? Number(thresholds[0]) : 80);
+  const thresholdsArr = Array.isArray(thresholds) && thresholds.length > 0 ? thresholds : [primaryThreshold];
+
   try {
     await query(`
-      INSERT INTO budgets (provider_id, monthly_limit_usd, user_id, alert_thresholds, email_alerts_enabled, dashboard_alerts_enabled)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO budgets (provider_id, monthly_limit_usd, user_id, alert_at_percent, alert_thresholds, email_alerts_enabled, dashboard_alerts_enabled)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (user_id, provider_id) DO UPDATE 
-      SET monthly_limit_usd = $2, alert_thresholds = $4, email_alerts_enabled = $5, dashboard_alerts_enabled = $6, updated_at = NOW()
-    `, [provider_id, limit, req.user.id, thresholds || [50, 80, 100], email_alerts !== false, dashboard_alerts !== false]);
-    res.json({ success: true });
+      SET monthly_limit_usd = $2, alert_at_percent = $4, alert_thresholds = $5, email_alerts_enabled = $6, dashboard_alerts_enabled = $7, updated_at = NOW()
+    `, [provider_id, limit, req.user.id, primaryThreshold, thresholdsArr, email_alerts !== false, dashboard_alerts !== false]);
+
+    // Invalidate dashboard caches for the user
+    try {
+      if (redis) {
+        await redis.del(`dashboard:${req.user.id}:this_month`);
+        await redis.del(`dashboard:${req.user.id}:last_30_days`);
+        await redis.del(`dashboard:${req.user.id}:quarter`);
+      }
+    } catch (cacheErr) {}
+
+    res.json({ success: true, alert_at_percent: primaryThreshold });
   } catch (error) {
     res.status(500).json({ error: 'Failed to save budget' });
   }

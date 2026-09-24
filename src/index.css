@@ -2,9 +2,11 @@
 
 @layer base {
   :root {
-    --canvas-bg: #F1F4F9;
-    --card-bg: #FFFFFF;
-    --card-border: rgba(218, 225, 233, 0.85);
+    --canvas-bg: #E8EBF0;
+    --card-offwhite: #F8F9FB;
+    --card-border: rgba(206, 214, 224, 0.95);
+    --well-bg: #EEF1F6;
+    --well-border: rgba(214, 221, 231, 0.9);
   }
 
   body {
@@ -21,62 +23,67 @@
   }
 }
 
-/* Bespoke Light Gray Architectural Textured Canvas */
+/* Bespoke Light Gray & Off-White Architectural Textured Canvas */
 .textured-canvas {
-  background-color: #F1F4F9;
+  background-color: #E8EBF0;
   background-image: 
-    radial-gradient(circle at 50% -100px, rgba(255, 255, 255, 0.95) 0%, rgba(241, 244, 249, 0.4) 600px, transparent 1000px),
-    radial-gradient(rgba(148, 163, 184, 0.25) 1px, transparent 1px),
-    linear-gradient(to right, rgba(226, 232, 240, 0.35) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(226, 232, 240, 0.35) 1px, transparent 1px);
+    radial-gradient(circle at 50% 0px, rgba(248, 249, 251, 0.75) 0%, rgba(232, 235, 240, 0.5) 750px, transparent 1200px),
+    radial-gradient(rgba(140, 153, 172, 0.28) 1px, transparent 1px),
+    linear-gradient(to right, rgba(206, 214, 225, 0.45) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(206, 214, 225, 0.45) 1px, transparent 1px);
   background-size: 100% 100%, 20px 20px, 80px 80px, 80px 80px;
   background-position: 0 0, 0 0, 0 0, 0 0;
 }
 
 /* Microdot Pattern Container */
 .bg-microdot {
-  background-image: radial-gradient(rgba(148, 163, 184, 0.22) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(140, 153, 172, 0.25) 1px, transparent 1px);
   background-size: 16px 16px;
 }
 
-/* 3D Tactile Card with Crisp Dual-Border & Multi-layered Diffuse Elevation */
-.card-3d {
-  background: #FFFFFF;
-  border: 1px solid rgba(218, 225, 233, 0.9);
+/* 3D Tactile Card in Warm Off-White / Architectural Gray */
+.card-3d, .card-offwhite {
+  background: #F8F9FB;
+  border: 1px solid rgba(206, 214, 225, 0.95);
   box-shadow: 
-    0 1px 2px rgba(15, 23, 42, 0.025),
-    0 6px 18px -3px rgba(15, 23, 42, 0.04),
-    0 14px 28px -6px rgba(15, 23, 42, 0.03),
-    inset 0 1px 0 rgba(255, 255, 255, 1),
-    inset 0 -1px 0 rgba(226, 232, 240, 0.4);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 6px 18px -3px rgba(15, 23, 42, 0.05),
+    0 16px 32px -6px rgba(15, 23, 42, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(214, 221, 231, 0.5);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.card-3d:hover {
-  transform: translateY(-2px);
-  border-color: rgba(199, 209, 221, 1);
+.card-3d:hover, .card-offwhite:hover {
+  border-color: rgba(188, 198, 212, 1);
   box-shadow: 
     0 2px 4px rgba(15, 23, 42, 0.03),
-    0 12px 30px -4px rgba(15, 23, 42, 0.07),
+    0 10px 24px -4px rgba(15, 23, 42, 0.07),
     0 20px 36px -8px rgba(15, 23, 42, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 1);
 }
 
-/* Subtle Inset Well / Recessed Plate */
+/* Subtle Inset Well / Recessed Plate in Soft Gray */
 .plate-recessed {
-  background: #F8FAFC;
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: #EEF1F6;
+  border: 1px solid rgba(214, 221, 231, 0.95);
   box-shadow: 
     inset 0 1px 3px rgba(15, 23, 42, 0.04),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.8),
-    0 1px 0 rgba(255, 255, 255, 0.8);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Inset Soft Gray Pill / Well Box */
+.well-gray {
+  background: #ECEFF4;
+  border: 1px solid rgba(214, 221, 231, 0.9);
 }
 
 /* Tactile 3D Buttons */
 .btn-3d-primary {
   background: linear-gradient(180deg, #4F46E5 0%, #4338CA 100%);
   color: #FFFFFF;
-  border: 1px solid rgba(67, 56, 202, 0.5);
+  border: 1px solid rgba(67, 56, 202, 0.6);
   box-shadow: 
     0 3px 12px -1px rgba(79, 70, 229, 0.4),
     0 1px 2px rgba(15, 23, 42, 0.1),
@@ -100,38 +107,30 @@
     inset 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
-.btn-3d-white {
-  background: linear-gradient(180deg, #FFFFFF 0%, #F9FAFB 100%);
+/* Off-White Tactile Button */
+.btn-3d-white, .btn-3d-offwhite {
+  background: linear-gradient(180deg, #FBFBFD 0%, #EFF2F7 100%);
   color: #1E293B;
-  border: 1px solid rgba(218, 225, 233, 0.95);
+  border: 1px solid rgba(206, 214, 225, 0.95);
   box-shadow: 
     0 1px 3px rgba(15, 23, 42, 0.04),
     0 2px 6px -1px rgba(15, 23, 42, 0.03),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: all 0.18s ease;
 }
 
-.btn-3d-white:hover {
-  background: #FFFFFF;
-  border-color: rgba(199, 209, 221, 1);
+.btn-3d-white:hover, .btn-3d-offwhite:hover {
+  background: #F4F6FA;
+  border-color: rgba(188, 198, 212, 1);
   box-shadow: 
     0 3px 10px -2px rgba(15, 23, 42, 0.07),
     inset 0 1px 0 rgba(255, 255, 255, 1);
   transform: translateY(-1px);
 }
 
-.btn-3d-white:active {
+.btn-3d-white:active, .btn-3d-offwhite:active {
   transform: translateY(1px);
   box-shadow: 
     0 1px 2px rgba(15, 23, 42, 0.04),
     inset 0 1px 2px rgba(15, 23, 42, 0.05);
-}
-
-/* Tactile Tech Badges */
-.badge-tactile {
-  background: #FFFFFF;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 
-    0 1px 2px rgba(15, 23, 42, 0.03),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
 }

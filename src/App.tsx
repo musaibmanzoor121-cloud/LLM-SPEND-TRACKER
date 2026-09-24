@@ -12,14 +12,10 @@ import {
   User as UserIcon, 
   HelpCircle, 
   Bot, 
-  ShieldAlert,
   ChevronDown,
   Menu,
   X,
-  ExternalLink,
-  ShieldCheck,
-  Zap,
-  Activity
+  ShieldCheck
 } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import Dashboard from './components/Dashboard';
@@ -51,8 +47,8 @@ function Navbar({ onLogout }: { onLogout: () => void }) {
 
   const navItems = [
     { path: '/', label: 'Overview', icon: <LayoutDashboard size={15} /> },
-    { path: '/chat', label: 'AI Copilot Studio', icon: <Bot size={15} /> },
-    { path: '/keys', label: 'API Key Vault', icon: <KeyRound size={15} /> },
+    { path: '/chat', label: 'Copilot Studio', icon: <Bot size={15} /> },
+    { path: '/keys', label: 'API Vault', icon: <KeyRound size={15} /> },
     { path: '/budgets', label: 'Budget Caps', icon: <Sliders size={15} /> },
     { path: '/settings', label: 'Preferences', icon: <UserIcon size={15} /> },
   ];
@@ -61,42 +57,37 @@ function Navbar({ onLogout }: { onLogout: () => void }) {
   const userInitial = userEmail.charAt(0).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-[0_2px_10px_rgba(15,23,42,0.03)]">
+    <header className="sticky top-0 z-40 bg-[#F6F7FA]/95 backdrop-blur-md border-b border-slate-300/70 shadow-[0_2px_8px_rgba(15,23,42,0.02)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
-        {/* Left Zone: Distinctive Watchdog FinOps Crest */}
+        {/* Left Zone: Watchdog FinOps Identity */}
         <div className="flex items-center gap-3 shrink-0">
           <Link to="/" className="flex items-center gap-2.5 group">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 flex items-center justify-center text-white shadow-[0_3px_10px_rgba(79,70,229,0.35),inset_0_1px_1px_rgba(255,255,255,0.4)] group-hover:scale-105 transition-all duration-200 border border-indigo-500/30">
               <ShieldCheck size={18} className="stroke-[2.5]" />
             </div>
             <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="font-heading font-bold text-lg text-slate-900 tracking-tight leading-none group-hover:text-indigo-600 transition-colors">
-                  Watchdog
-                </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold border border-indigo-100">
-                  FinOps
-                </span>
-              </div>
-              <span className="text-[9px] font-semibold tracking-wider text-slate-500 uppercase mt-0.5">
-                INTELLIGENT API CAPITAL
+              <span className="font-heading font-bold text-lg text-slate-900 tracking-tight leading-none group-hover:text-indigo-600 transition-colors">
+                Watchdog <span className="text-indigo-600 font-medium">FinOps</span>
+              </span>
+              <span className="text-[9px] font-semibold tracking-wider text-slate-400 uppercase mt-0.5">
+                AI API CAPITAL & TELEMETRY
               </span>
             </div>
           </Link>
         </div>
 
         {/* Center Zone: Clean Horizontal Nav Links */}
-        <nav className="hidden md:flex items-center gap-1 lg:gap-1.5">
+        <nav className="hidden md:flex items-center gap-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold tracking-tight transition-all duration-200 ${
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold tracking-tight transition-all duration-150 ${
                   isActive
-                    ? 'bg-slate-100 text-indigo-700 shadow-[inset_0_1px_1px_rgba(0,0,0,0.05)] border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/80'
+                    ? 'bg-[#EAECEF] text-indigo-700 shadow-[inset_0_1px_1px_rgba(0,0,0,0.04)] border border-slate-300/80'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-[#EEF0F4]'
                 }`}
               >
                 <span className={isActive ? 'text-indigo-600' : 'text-slate-400'}>{item.icon}</span>
@@ -106,10 +97,10 @@ function Navbar({ onLogout }: { onLogout: () => void }) {
           })}
         </nav>
 
-        {/* Right Zone: Telemetry Heartbeat + User Administrator Pill */}
+        {/* Right Zone: Telemetry Heartbeat + User Administrator Menu */}
         <div className="flex items-center gap-3 shrink-0">
           {/* Live Telemetry Radar */}
-          <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200/80 text-[11px] font-medium text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,1)]">
+          <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#ECEFF4] border border-slate-300/70 text-[11px] font-medium text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -119,7 +110,7 @@ function Navbar({ onLogout }: { onLogout: () => void }) {
 
           <Link
             to="/help"
-            className="hidden sm:flex items-center text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            className="hidden sm:flex items-center text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-[#ECEFF4] transition-colors"
             title="Help & Documentation"
           >
             <HelpCircle size={18} />
@@ -129,7 +120,7 @@ function Navbar({ onLogout }: { onLogout: () => void }) {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-              className="flex items-center gap-2 p-1.5 pl-2 pr-2.5 rounded-xl border border-slate-200/90 bg-slate-50/90 hover:bg-white hover:border-slate-300 transition-all duration-200 shadow-[0_1px_2px_rgba(15,23,42,0.04)] text-left cursor-pointer"
+              className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-xl border border-slate-300/80 bg-[#ECEFF4] hover:bg-[#F2F4F8] hover:border-slate-300 transition-all duration-150 shadow-[0_1px_2px_rgba(15,23,42,0.04)] text-left cursor-pointer"
             >
               <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white flex items-center justify-center text-xs font-bold shadow-[0_2px_5px_rgba(79,70,229,0.25)]">
                 {userInitial}
@@ -147,8 +138,8 @@ function Navbar({ onLogout }: { onLogout: () => void }) {
 
             {/* Dropdown Menu */}
             {userDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl border border-slate-200/90 shadow-[0_12px_32px_rgba(15,23,42,0.12),0_2px_6px_rgba(15,23,42,0.04)] p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="p-2 border-b border-slate-100 mb-1">
+              <div className="absolute right-0 mt-2 w-56 bg-[#F8F9FB] rounded-2xl border border-slate-300/80 shadow-[0_12px_32px_rgba(15,23,42,0.12),0_2px_6px_rgba(15,23,42,0.04)] p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="p-2 border-b border-slate-200/80 mb-1">
                   <div className="text-xs font-semibold text-slate-900 truncate">{userEmail}</div>
                   <div className="text-[10px] text-emerald-600 font-medium flex items-center gap-1 mt-0.5">
                     <ShieldCheck size={12} />
@@ -159,7 +150,7 @@ function Navbar({ onLogout }: { onLogout: () => void }) {
                 <Link
                   to="/settings"
                   onClick={() => setUserDropdownOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#EEF1F6] transition-colors"
                 >
                   <UserIcon size={15} className="text-slate-400" />
                   <span>Account & API Settings</span>
@@ -168,13 +159,13 @@ function Navbar({ onLogout }: { onLogout: () => void }) {
                 <Link
                   to="/help"
                   onClick={() => setUserDropdownOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-[#EEF1F6] transition-colors"
                 >
                   <HelpCircle size={15} className="text-slate-400" />
                   <span>Documentation & Guide</span>
                 </Link>
 
-                <div className="border-t border-slate-100 my-1" />
+                <div className="border-t border-slate-200/80 my-1" />
 
                 <button
                   onClick={() => {
@@ -193,7 +184,7 @@ function Navbar({ onLogout }: { onLogout: () => void }) {
           {/* Mobile Menu Toggle Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100"
+            className="md:hidden p-2 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-[#ECEFF4]"
           >
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -202,7 +193,7 @@ function Navbar({ onLogout }: { onLogout: () => void }) {
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-200/80 bg-white px-4 pt-2 pb-4 space-y-1 shadow-lg">
+        <div className="md:hidden border-t border-slate-300/80 bg-[#F6F7FA] px-4 pt-2 pb-4 space-y-1 shadow-lg">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -264,7 +255,7 @@ function MainApp() {
       <div className="min-h-screen textured-canvas flex flex-col font-sans text-slate-800 selection:bg-indigo-500 selection:text-white">
         {showOnboarding && <Onboarding onComplete={handleCompleteOnboarding} />}
         <Navbar onLogout={logout} />
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-7 sm:py-9">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/chat" element={<GeminiChatbot />} />
