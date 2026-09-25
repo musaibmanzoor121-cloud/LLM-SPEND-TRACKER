@@ -15,7 +15,8 @@ import {
   ChevronDown,
   Menu,
   X,
-  ShieldCheck
+  ShieldCheck,
+  Rotate3d
 } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import Dashboard from './components/Dashboard';
@@ -99,6 +100,13 @@ function Navbar({ onLogout }: { onLogout: () => void }) {
 
         {/* Right Zone: Telemetry Heartbeat + User Administrator Menu */}
         <div className="flex items-center gap-3 shrink-0">
+
+          {/* 3D Spatial Engine Badge */}
+          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#ECEFF4] border border-slate-300/80 text-[11px] font-semibold text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+            <Rotate3d size={13} className="text-indigo-600" />
+            <span>3D Spatial UI</span>
+          </div>
+
           {/* Live Telemetry Radar */}
           <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#ECEFF4] border border-slate-300/70 text-[11px] font-medium text-slate-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
             <span className="relative flex h-2 w-2">

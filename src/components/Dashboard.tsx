@@ -29,6 +29,9 @@ import {
   KeyRound
 } from 'lucide-react';
 import TokenConsumptionChart from './TokenConsumptionChart';
+import Card3D from './Card3D';
+import HolographicSentinelGauge from './HolographicSentinelGauge';
+import Fleet3DMatrix from './Fleet3DMatrix';
 
 interface SpendData {
   provider_id: string;
@@ -327,8 +330,8 @@ export default function Dashboard() {
       {/* 2. Top Asymmetric Executive Command (7:5 Split) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left Column (7 cols): Capital Velocity & Run-Rate Trajectory in Off-White */}
-        <div className="lg:col-span-7 card-3d rounded-2xl p-6 flex flex-col justify-between">
-          <div>
+        <Card3D className="lg:col-span-7 card-3d rounded-2xl p-6 flex flex-col justify-between" maxTilt={5}>
+          <div className="layer-z-10">
             {/* Header with high-contrast unboxed metrics & Segmented Switcher */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-slate-200/80 mb-5">
               <div>
@@ -379,7 +382,7 @@ export default function Dashboard() {
             </div>
 
             {/* Trajectory Curve with soft fill */}
-            <div className="w-full h-64 relative">
+            <div className="w-full h-64 relative layer-z-5">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
@@ -433,7 +436,7 @@ export default function Dashboard() {
           </div>
 
           {/* Footer Telemetry Benchmark Row */}
-          <div className="pt-4 mt-2 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+          <div className="pt-4 mt-2 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 layer-z-10">
             <div>
               <span>Peak Day: </span>
               <strong className="text-slate-800">$1,890.00</strong>
@@ -446,12 +449,12 @@ export default function Dashboard() {
               <ArrowRight size={12} />
             </Link>
           </div>
-        </div>
+        </Card3D>
 
-        {/* Right Column (5 cols): Budget Sentinel & Guardrail Resilience in Off-White */}
-        <div className="lg:col-span-5 card-3d rounded-2xl p-6 flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-start mb-4">
+        {/* Right Column (5 cols): 3D Holographic Budget Sentinel & Guardrail Resilience */}
+        <Card3D className="lg:col-span-5 card-3d rounded-2xl p-6 flex flex-col justify-between" maxTilt={6}>
+          <div className="layer-z-10">
+            <div className="flex justify-between items-start mb-3">
               <div>
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                   Budget Sentinel
@@ -460,56 +463,26 @@ export default function Dashboard() {
                   Cap Guardrail Resilience
                 </h2>
               </div>
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200 shadow-xs">
                 <ShieldCheck size={18} className="stroke-[2.5]" />
               </div>
             </div>
 
-            {/* Circular Arc / Radial Utilization Meter in Soft Gray Well */}
-            <div className="p-4 rounded-xl plate-recessed flex items-center gap-5 mb-5">
-              <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
-                <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 72 72">
-                  <circle
-                    cx="36"
-                    cy="36"
-                    r="30"
-                    stroke="#D8DEE8"
-                    strokeWidth="6"
-                    fill="transparent"
-                  />
-                  <circle
-                    cx="36"
-                    cy="36"
-                    r="30"
-                    stroke="#4F46E5"
-                    strokeWidth="6"
-                    strokeDasharray={`${(burnRatePercent / 100) * 188.4} 188.4`}
-                    strokeLinecap="round"
-                    fill="transparent"
-                  />
-                </svg>
-                <div className="absolute flex flex-col items-center">
-                  <span className="text-sm font-heading font-bold text-slate-900">
-                    {burnRatePercent.toFixed(1)}%
-                  </span>
-                  <span className="text-[9px] text-slate-400 uppercase font-semibold">Burn</span>
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs text-slate-600">
-                  Committed <strong className="text-slate-900">${totalSpendMTD.toLocaleString()}</strong> of <strong className="text-slate-900">${totalBudgetLimit.toLocaleString()}</strong> monthly ceiling.
-                </div>
-                <div className="text-[11px] text-emerald-700 font-semibold mt-1 flex items-center gap-1">
-                  <CheckCircle2 size={13} />
-                  <span>Safe Margin: ${(totalBudgetLimit - totalSpendMTD).toLocaleString()} headroom</span>
-                </div>
-              </div>
+            {/* 3D Holographic Extruded Sentinel Gauge */}
+            <div className="p-3 rounded-2xl plate-recessed mb-4 flex flex-col items-center">
+              <HolographicSentinelGauge
+                burnRatePercent={burnRatePercent}
+                thresholdPercent={80}
+                totalSpend={totalSpendMTD}
+                totalLimit={totalBudgetLimit}
+                size={180}
+                showDetails={true}
+              />
             </div>
 
             {/* 3 Active Threshold Gates in Soft Gray Well Plates */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between p-2.5 rounded-lg well-gray text-xs">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-2 rounded-lg well-gray text-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
                   <span className="font-semibold text-slate-800">Gate 1: 50% Early Advisory</span>
@@ -517,7 +490,7 @@ export default function Dashboard() {
                 <span className="text-slate-500 font-medium">Nominal ($250k)</span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-lg well-gray text-xs">
+              <div className="flex items-center justify-between p-2 rounded-lg well-gray text-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
                   <span className="font-semibold text-slate-800">Gate 2: 80% Critical Warning</span>
@@ -525,7 +498,7 @@ export default function Dashboard() {
                 <span className="text-slate-500 font-medium">Armed ($400k)</span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-lg well-gray text-xs">
+              <div className="flex items-center justify-between p-2 rounded-lg well-gray text-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-rose-500" />
                   <span className="font-semibold text-slate-800">Gate 3: 100% Hard Enforcement</span>
@@ -535,7 +508,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="pt-4 mt-4 border-t border-slate-200/80 flex justify-between items-center text-xs">
+          <div className="pt-3 mt-3 border-t border-slate-200/80 flex justify-between items-center text-xs layer-z-10">
             <span className="text-slate-500">Automated Resend dispatch</span>
             <Link 
               to="/budgets" 
@@ -544,62 +517,19 @@ export default function Dashboard() {
               Configure Cap Thresholds →
             </Link>
           </div>
-        </div>
+        </Card3D>
       </div>
 
-      {/* 3. Middle 3-Column Infrastructure Intelligence Grid in Off-White */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* Col 1: Foundational Model Allocation */}
-        <div className="card-3d rounded-2xl p-5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Cpu size={16} className="text-indigo-600" />
-                <h3 className="text-sm font-heading font-bold text-slate-900 tracking-tight">
-                  Foundational Model Fleet
-                </h3>
-              </div>
-              <span className="text-[11px] font-bold text-slate-500">4 Active</span>
-            </div>
+      {/* 3. Interactive 3D Spatial Model Fleet Topology Matrix */}
+      <div>
+        <Fleet3DMatrix />
+      </div>
 
-            {/* Proportional Stack Bar */}
-            <div className="w-full h-2 rounded-full overflow-hidden flex bg-slate-200/80 mb-4 shadow-[inset_0_1px_1px_rgba(0,0,0,0.06)]">
-              {modelBreakdownList.map((m, idx) => (
-                <div key={idx} className={`${m.color} h-full`} style={{ width: `${m.pct}%` }} title={`${m.provider}: ${m.pct}%`} />
-              ))}
-            </div>
-
-            {/* Provider Breakdown List */}
-            <div className="space-y-3">
-              {modelBreakdownList.map((m, idx) => (
-                <div key={idx} className="flex items-start justify-between text-xs">
-                  <div>
-                    <div className="font-semibold text-slate-800 flex items-center gap-1.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${m.color}`} />
-                      <span>{m.provider}</span>
-                    </div>
-                    <span className="text-[10px] text-slate-500 block pl-3">{m.models}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold text-slate-900">{m.cost}</span>
-                    <span className="text-[10px] text-slate-500 block">{m.tokens} · {m.latency}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="pt-3 mt-4 border-t border-slate-200/80 text-xs flex justify-between items-center text-slate-500">
-            <span>Blend: $0.27 / 1M tok</span>
-            <Link to="/budgets" className="text-indigo-600 hover:text-indigo-700 font-semibold">
-              Manage Models →
-            </Link>
-          </div>
-        </div>
-
-        {/* Col 2: API Key Vault & Security Posture */}
-        <div className="card-3d rounded-2xl p-5 flex flex-col justify-between">
-          <div>
+      {/* 4. Security Vault & Surveillance Journal 2-Column Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Col 1: API Key Vault & Security Posture */}
+        <Card3D className="card-3d rounded-2xl p-5 md:p-6 flex flex-col justify-between" maxTilt={4}>
+          <div className="layer-z-10">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <KeyRound size={16} className="text-indigo-600" />
@@ -616,7 +546,7 @@ export default function Dashboard() {
 
             {/* Vault Pipelines Status in Soft Gray Well Boxes */}
             <div className="space-y-2.5">
-              <div className="flex items-center justify-between p-2 rounded-lg well-gray text-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-lg well-gray text-xs">
                 <div>
                   <span className="font-semibold text-slate-800 block">OpenAI Production Key</span>
                   <span className="text-[10px] font-mono text-slate-500">sk-proj-****48a2</span>
@@ -626,7 +556,7 @@ export default function Dashboard() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2 rounded-lg well-gray text-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-lg well-gray text-xs">
                 <div>
                   <span className="font-semibold text-slate-800 block">Anthropic Claude Vault</span>
                   <span className="text-[10px] font-mono text-slate-500">sk-ant-****93bf</span>
@@ -636,7 +566,7 @@ export default function Dashboard() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-2 rounded-lg well-gray text-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-lg well-gray text-xs">
                 <div>
                   <span className="font-semibold text-slate-800 block">Google Gemini API Node</span>
                   <span className="text-[10px] font-mono text-slate-500">AIzaSy****1240</span>
@@ -648,17 +578,17 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="pt-3 mt-4 border-t border-slate-200/80 text-xs flex justify-between items-center text-slate-500">
+          <div className="pt-3 mt-4 border-t border-slate-200/80 text-xs flex justify-between items-center text-slate-500 layer-z-10">
             <span>{totalKeysActive} Key pipelines monitored</span>
             <Link to="/keys" className="text-indigo-600 hover:text-indigo-700 font-semibold">
               Open Vault →
             </Link>
           </div>
-        </div>
+        </Card3D>
 
-        {/* Col 3: Immutable Surveillance Journal in Off-White */}
-        <div className="card-3d rounded-2xl p-5 flex flex-col justify-between">
-          <div>
+        {/* Col 2: Immutable Surveillance Journal */}
+        <Card3D className="card-3d rounded-2xl p-5 md:p-6 flex flex-col justify-between" maxTilt={4}>
+          <div className="layer-z-10">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Activity size={16} className="text-indigo-600" />
@@ -716,13 +646,13 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="pt-3 mt-4 border-t border-slate-200/80 text-xs flex justify-between items-center text-slate-500">
+          <div className="pt-3 mt-4 border-t border-slate-200/80 text-xs flex justify-between items-center text-slate-500 layer-z-10">
             <span>Verified: SHA-256</span>
             <Link to="/keys" className="text-indigo-600 hover:text-indigo-700 font-semibold">
               Full Audit Trail →
             </Link>
           </div>
-        </div>
+        </Card3D>
       </div>
 
       {/* 4. Token Consumption & Ingestion Telemetry */}

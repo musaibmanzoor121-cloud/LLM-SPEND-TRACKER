@@ -134,3 +134,183 @@
     0 1px 2px rgba(15, 23, 42, 0.04),
     inset 0 1px 2px rgba(15, 23, 42, 0.05);
 }
+
+/* 3D Perspective & Spatial Depth Hierarchy */
+.perspective-container {
+  perspective: 1200px;
+  perspective-origin: 50% 50%;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+/* Spatial Z-Layering (elements physically hover above the card surface) */
+.layer-z-base {
+  transform: translateZ(0px);
+}
+.layer-z-5 {
+  transform: translateZ(8px);
+}
+.layer-z-10 {
+  transform: translateZ(16px);
+}
+.layer-z-15 {
+  transform: translateZ(24px);
+}
+.layer-z-20 {
+  transform: translateZ(32px);
+}
+.layer-z-30 {
+  transform: translateZ(48px);
+}
+
+/* 3D Tactile Push Button with physical depression */
+.btn-tactile-3d {
+  position: relative;
+  background: linear-gradient(180deg, #FFFFFF 0%, #EFF2F7 100%);
+  border: 1px solid #CBD5E1;
+  box-shadow: 0 4px 0 #94A3B8, 0 6px 12px rgba(15, 23, 42, 0.08);
+  transition: all 0.1s ease;
+}
+
+.btn-tactile-3d:hover {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 #94A3B8, 0 8px 16px rgba(15, 23, 42, 0.1);
+}
+
+.btn-tactile-3d:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #94A3B8, 0 2px 4px rgba(15, 23, 42, 0.08);
+}
+
+/* 3D Tactile Push Button Active State */
+.btn-tactile-3d-active {
+  position: relative;
+  background: linear-gradient(180deg, #4338CA 0%, #3730A3 100%);
+  color: #FFFFFF;
+  border: 1px solid #312E81;
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #1E1B4B, 0 3px 8px rgba(67, 56, 202, 0.35);
+}
+
+/* Tactile Laser-Etched CNC Slider Groove */
+.groove-track-3d {
+  background: #DFE4EC;
+  border-radius: 9999px;
+  box-shadow: 
+    inset 0 2px 4px rgba(15, 23, 42, 0.18),
+    inset 0 0 1px rgba(15, 23, 42, 0.25),
+    0 1px 1px rgba(255, 255, 255, 0.9);
+}
+
+/* Custom 3D Range Input styling */
+input[type="range"].slider-3d {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"].slider-3d::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 9999px;
+  background: #DFE4EC;
+  box-shadow: 
+    inset 0 2px 4px rgba(15, 23, 42, 0.18),
+    0 1px 1px rgba(255, 255, 255, 0.9);
+}
+
+input[type="range"].slider-3d::-moz-range-track {
+  height: 10px;
+  border-radius: 9999px;
+  background: #DFE4EC;
+  box-shadow: 
+    inset 0 2px 4px rgba(15, 23, 42, 0.18),
+    0 1px 1px rgba(255, 255, 255, 0.9);
+}
+
+input[type="range"].slider-3d::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -7px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #FFFFFF 0%, #E2E8F0 50%, #94A3B8 100%);
+  border: 2px solid #4F46E5;
+  box-shadow: 
+    0 4px 10px rgba(15, 23, 42, 0.25),
+    0 1px 2px rgba(0, 0, 0, 0.15),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="range"].slider-3d::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 
+    0 6px 16px rgba(79, 70, 229, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 1);
+}
+
+input[type="range"].slider-3d::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.22);
+}
+
+/* Holographic Rotating Pulse Animations */
+@keyframes holoPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+.animate-holo-pulse {
+  animation: holoPulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes packetTravel {
+  0% {
+    stroke-dashoffset: 60;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-packet-stream {
+  stroke-dasharray: 6 12;
+  animation: packetTravel 1.4s linear infinite;
+}
+
+/* 3D Glassmorphic Toast Deck */
+.toast-3d-deck {
+  perspective: 900px;
+  transform-style: preserve-3d;
+}
+
+.toast-3d-card {
+  transform: rotateX(2deg) translateZ(10px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 
+    0 20px 45px -10px rgba(15, 23, 42, 0.16),
+    0 4px 12px -2px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+

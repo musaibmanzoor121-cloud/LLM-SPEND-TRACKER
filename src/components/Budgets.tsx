@@ -23,6 +23,8 @@ import {
   Info
 } from 'lucide-react';
 import AlertThresholdsConfig from './AlertThresholdsConfig';
+import Card3D from './Card3D';
+import HolographicSentinelGauge from './HolographicSentinelGauge';
 
 interface Budget {
   provider_id: string;
@@ -180,6 +182,17 @@ export default function Budgets() {
     });
   }, [budgets, spendByProvider]);
 
+  // Aggregate fleet metrics
+  const totalFleetSpend = useMemo(() => {
+    return spendData.reduce((acc, curr) => acc + Number(curr.total_spend || 0), 0) || 38420.00;
+  }, [spendData]);
+
+  const totalFleetLimit = useMemo(() => {
+    return budgets.reduce((acc, curr) => acc + Number(curr.monthly_limit_usd || 0), 0) || 500000;
+  }, [budgets]);
+
+  const fleetBurnRate = totalFleetLimit > 0 ? (totalFleetSpend / totalFleetLimit) * 100 : 7.68;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!limit || isNaN(Number(limit))) return;
@@ -280,7 +293,7 @@ export default function Budgets() {
   return (
     <div className="flex flex-col space-y-7 animate-in fade-in duration-200 relative">
       {/* 0. Floating Visual Toast Notifications Container */}
-      <div className="fixed top-20 right-4 sm:right-8 z-50 flex flex-col gap-3 max-w-md w-full pointer-events-none">
+      <div className="fixed top-20 right-4 sm:right-8 z-50 flex flex-col gap-3 max-w-md w-full pointer-events-none toast-3d-deck">
         {toasts.map((toast) => {
           const isCritical = toast.severity === 'critical';
           const thresholdDollar = ((toast.limit * toast.thresholdPercent) / 100).toFixed(2);
@@ -289,10 +302,10 @@ export default function Budgets() {
           return (
             <div
               key={toast.id}
-              className={`pointer-events-auto rounded-2xl p-4 shadow-[0_12px_36px_rgba(15,23,42,0.18),0_2px_8px_rgba(15,23,42,0.06)] border animate-in slide-in-from-top-4 fade-in duration-200 transition-all ${
+              className={`pointer-events-auto rounded-2xl p-4.5 toast-3d-card border animate-in slide-in-from-top-4 fade-in duration-200 transition-all ${
                 isCritical
-                  ? 'bg-[#FFF8F8] border-rose-300 text-slate-900 ring-1 ring-rose-400/40'
-                  : 'bg-[#FFFDF7] border-amber-300 text-slate-900 ring-1 ring-amber-400/40'
+                  ? 'border-rose-400 text-slate-900 ring-2 ring-rose-500/30'
+                  : 'border-amber-400 text-slate-900 ring-2 ring-amber-500/30'
               }`}
             >
               <div className="flex items-start justify-between gap-3">
@@ -405,10 +418,87 @@ export default function Budgets() {
         </div>
       </div>
 
-      {/* 2. Visual Breach Alert Banner (Renders when any budget has exceeded threshold) */}
+      {/* 2. Executive 3D Budget Sentinel Command Deck */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Left Card (7 cols): Fleet Guardrail Posture */}
+        <Card3D className="lg:col-span-7 card-3d rounded-2xl p-6 flex flex-col justify-between" maxTilt={5}>
+          <div className="layer-z-10">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 mb-4">
+              <div className="flex items-center gap-2">
+                <Sliders size={16} className="text-indigo-600" />
+                <h3 className="text-sm font-heading font-bold text-slate-900 tracking-tight">
+                  Fleet Capital Ceiling & Resilience
+                </h3>
+              </div>
+              <span className="text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                {budgets.length} Guardrails Active
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+              <div className="p-3 rounded-xl plate-recessed">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Committed Spend</span>
+                <span className="text-lg font-heading font-extrabold text-slate-900 font-mono mt-0.5 block">
+                  ${totalFleetSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-[10px] text-slate-500">Current cycle</span>
+              </div>
+              <div className="p-3 rounded-xl plate-recessed">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Fleet Ceiling</span>
+                <span className="text-lg font-heading font-extrabold text-slate-900 font-mono mt-0.5 block">
+                  ${totalFleetLimit.toLocaleString()}
+                </span>
+                <span className="text-[10px] text-emerald-700 font-semibold">100% Armed</span>
+              </div>
+              <div className="p-3 rounded-xl plate-recessed col-span-2 sm:col-span-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Threshold Breaches</span>
+                <span className={`text-lg font-heading font-extrabold font-mono mt-0.5 block ${
+                  breachedBudgets.length > 0 ? 'text-amber-600' : 'text-emerald-700'
+                }`}>
+                  {breachedBudgets.length} Detected
+                </span>
+                <span className="text-[10px] text-slate-500">
+                  {breachedBudgets.length > 0 ? 'Alert armed' : 'Nominal safe'}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              When any LLM API provider crosses its configured percentage threshold, Watchdog immediately triggers a spatial 3D toast notification, highlights the provider in amber/rose, and queues automated email alerts.
+            </p>
+          </div>
+
+          <div className="pt-3 mt-3 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500 layer-z-10">
+            <span>Primary alert trigger: <strong>{thresholdPercent}% of monthly cap</strong></span>
+            <button
+              onClick={() => handleSimulateToast()}
+              className="text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1 cursor-pointer"
+            >
+              <span>Test Sentinel</span>
+              <ArrowRight size={12} />
+            </button>
+          </div>
+        </Card3D>
+
+        {/* Right Card (5 cols): 3D Holographic Gauge */}
+        <Card3D className="lg:col-span-5 card-3d rounded-2xl p-6 flex flex-col items-center justify-center text-center" maxTilt={6}>
+          <div className="layer-z-10 w-full flex flex-col items-center">
+            <HolographicSentinelGauge
+              burnRatePercent={fleetBurnRate}
+              thresholdPercent={thresholdPercent}
+              totalSpend={totalFleetSpend}
+              totalLimit={totalFleetLimit}
+              size={180}
+              showDetails={true}
+            />
+          </div>
+        </Card3D>
+      </div>
+
+      {/* 3. Visual Breach Alert Banner (Renders when any budget has exceeded threshold) */}
       {breachedBudgets.length > 0 && (
-        <div className="rounded-2xl p-4 sm:p-5 bg-[#FFF9F5] border border-amber-300/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start gap-3">
+        <Card3D className="rounded-2xl p-4 sm:p-5 bg-[#FFF9F5] border border-amber-300/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4" maxTilt={3}>
+          <div className="flex items-start gap-3 layer-z-10">
             <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
               <ShieldAlert size={18} />
             </div>
@@ -446,7 +536,7 @@ export default function Budgets() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+          <div className="flex items-center gap-2 self-start md:self-auto shrink-0 layer-z-10">
             <button
               onClick={() => {
                 if (breachedBudgets[0]) {
@@ -459,284 +549,288 @@ export default function Budgets() {
               <span>Re-trigger Toast</span>
             </button>
           </div>
-        </div>
+        </Card3D>
       )}
 
-      {/* 3. Configure Budget Form Card (Off-White #F8F9FB) */}
-      <div className="card-3d bg-[#F8F9FB] rounded-2xl p-6 sm:p-8">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 mb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200/70 text-indigo-600 flex items-center justify-center shadow-sm">
-              <Sliders size={16} />
-            </div>
-            <div>
-              <h2 className="text-base font-heading font-bold text-slate-900 tracking-tight">
-                Configure Spend Threshold & Monthly Cap
-              </h2>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Define the monthly cap and exact percentage threshold that triggers visual toasts.
-              </p>
-            </div>
-          </div>
-
-          {statusMessage && (
-            <div className={`px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 ${
-              statusMessage.type === 'success' 
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                : 'bg-rose-50 text-rose-800 border border-rose-200'
-            }`}>
-              {statusMessage.type === 'success' ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
-              <span>{statusMessage.text}</span>
-            </div>
-          )}
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4 max-w-3xl">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">LLM Provider</label>
-              <select 
-                value={providerId} 
-                onChange={(e) => setProviderId(e.target.value)}
-                className="w-full bg-[#ECEFF4] border border-slate-300/80 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-indigo-500 text-xs font-medium transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)] cursor-pointer"
-              >
-                <option value="openai">OpenAI (GPT-4o, o3-mini)</option>
-                <option value="anthropic">Anthropic (Claude 3.5 Sonnet)</option>
-                <option value="gemini">Google Gemini (Gemini 2.5 Flash, 1.5 Pro)</option>
-                <option value="mistral">Mistral AI (Large 2, Codestral)</option>
-                <option value="cohere">Cohere (Command R+)</option>
-                <option value="groq">Groq (Llama 3.3 Ultra-Fast)</option>
-                <option value="deepseek">DeepSeek (DeepSeek-V3, R1)</option>
-                <option value="perplexity">Perplexity (Sonar)</option>
-                <option value="together">Together AI</option>
-                <option value="openrouter">OpenRouter (Unified Fleet)</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Monthly Spending Limit (USD)</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <DollarSign size={14} />
-                </div>
-                <input 
-                  type="number" 
-                  step="0.01"
-                  min="0"
-                  value={limit}
-                  onChange={(e) => setLimit(e.target.value)}
-                  required
-                  placeholder="500.00"
-                  className="w-full bg-[#ECEFF4] border border-slate-300/80 rounded-xl pl-8 pr-3.5 py-2.5 text-slate-900 font-mono focus:outline-none focus:border-indigo-500 text-xs transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]"
-                />
+      {/* 4. Configure Budget Form Card (Off-White #F8F9FB) */}
+      <Card3D className="card-3d bg-[#F8F9FB] rounded-2xl p-6 sm:p-8" maxTilt={3}>
+        <div className="layer-z-10">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 mb-5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200/70 text-indigo-600 flex items-center justify-center shadow-sm">
+                <Sliders size={16} />
+              </div>
+              <div>
+                <h2 className="text-base font-heading font-bold text-slate-900 tracking-tight">
+                  Configure Spend Threshold & Monthly Cap
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Define the monthly cap and exact percentage threshold that triggers visual toasts.
+                </p>
               </div>
             </div>
+
+            {statusMessage && (
+              <div className={`px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 ${
+                statusMessage.type === 'success' 
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                  : 'bg-rose-50 text-rose-800 border border-rose-200'
+              }`}>
+                {statusMessage.type === 'success' ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
+                <span>{statusMessage.text}</span>
+              </div>
+            )}
           </div>
 
-          {/* Interactive Percentage Threshold Config with Slider & Preset Chips */}
-          <AlertThresholdsConfig 
-            thresholdPercent={thresholdPercent}
-            setThresholdPercent={setThresholdPercent}
-            thresholdsStr={thresholdsStr}
-            setThresholdsStr={setThresholdsStr}
-            emailAlerts={emailAlerts}
-            setEmailAlerts={setEmailAlerts}
-            dashboardAlerts={dashboardAlerts}
-            setDashboardAlerts={setDashboardAlerts}
-            monthlyLimit={Number(limit) || 0}
-          />
+          <form onSubmit={handleSubmit} className="space-y-4 max-w-3xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700">LLM Provider</label>
+                <select 
+                  value={providerId} 
+                  onChange={(e) => setProviderId(e.target.value)}
+                  className="w-full bg-[#ECEFF4] border border-slate-300/80 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:border-indigo-500 text-xs font-medium transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)] cursor-pointer"
+                >
+                  <option value="openai">OpenAI (GPT-4o, o3-mini)</option>
+                  <option value="anthropic">Anthropic (Claude 3.5 Sonnet)</option>
+                  <option value="gemini">Google Gemini (Gemini 2.5 Flash, 1.5 Pro)</option>
+                  <option value="mistral">Mistral AI (Large 2, Codestral)</option>
+                  <option value="cohere">Cohere (Command R+)</option>
+                  <option value="groq">Groq (Llama 3.3 Ultra-Fast)</option>
+                  <option value="deepseek">DeepSeek (DeepSeek-V3, R1)</option>
+                  <option value="perplexity">Perplexity (Sonar)</option>
+                  <option value="together">Together AI</option>
+                  <option value="openrouter">OpenRouter (Unified Fleet)</option>
+                </select>
+              </div>
 
-          <div className="pt-2 flex items-center gap-3">
-            <button 
-              type="submit" 
-              disabled={submitting || !limit}
-              className="btn-3d-primary px-5 py-2.5 rounded-xl font-semibold text-xs transition-all disabled:opacity-50 cursor-pointer shadow-[0_4px_14px_rgba(99,102,241,0.35)] flex items-center gap-1.5"
-            >
-              <ShieldCheck size={14} />
-              <span>{submitting ? 'Enforcing...' : 'Enforce Budget & Threshold'}</span>
-            </button>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700">Monthly Spending Limit (USD)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <DollarSign size={14} />
+                  </div>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    min="0"
+                    value={limit}
+                    onChange={(e) => setLimit(e.target.value)}
+                    required
+                    placeholder="500.00"
+                    className="w-full bg-[#ECEFF4] border border-slate-300/80 rounded-xl pl-8 pr-3.5 py-2.5 text-slate-900 font-mono focus:outline-none focus:border-indigo-500 text-xs transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]"
+                  />
+                </div>
+              </div>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => handleSimulateToast()}
-              className="btn-3d-offwhite px-4 py-2.5 rounded-xl font-semibold text-xs text-slate-700 transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <Play size={13} className="text-amber-600" />
-              <span>Test Toast Notification</span>
-            </button>
-          </div>
-        </form>
-      </div>
+            {/* Interactive Percentage Threshold Config with Slider & Preset Chips */}
+            <AlertThresholdsConfig 
+              thresholdPercent={thresholdPercent}
+              setThresholdPercent={setThresholdPercent}
+              thresholdsStr={thresholdsStr}
+              setThresholdsStr={setThresholdsStr}
+              emailAlerts={emailAlerts}
+              setEmailAlerts={setEmailAlerts}
+              dashboardAlerts={dashboardAlerts}
+              setDashboardAlerts={setDashboardAlerts}
+              monthlyLimit={Number(limit) || 0}
+            />
 
-      {/* 4. Active Budgets Table (Off-White #F8F9FB Card with Visual Progress Bars & Threshold Markers) */}
-      <div className="card-3d bg-[#F8F9FB] rounded-2xl overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-200/80 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Bell size={16} className="text-indigo-600" />
-            <h2 className="text-base font-heading font-bold text-slate-900 tracking-tight">
-              Active Provider Budgets & Threshold Guardrails
-            </h2>
-          </div>
-          <span className="text-xs font-semibold text-slate-500 font-mono">
-            {budgets.length} Guardrails Active
-          </span>
+            <div className="pt-2 flex items-center gap-3">
+              <button 
+                type="submit" 
+                disabled={submitting || !limit}
+                className="btn-3d-primary px-5 py-2.5 rounded-xl font-semibold text-xs transition-all disabled:opacity-50 cursor-pointer shadow-[0_4px_14px_rgba(99,102,241,0.35)] flex items-center gap-1.5"
+              >
+                <ShieldCheck size={14} />
+                <span>{submitting ? 'Enforcing...' : 'Enforce Budget & Threshold'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSimulateToast()}
+                className="btn-3d-offwhite px-4 py-2.5 rounded-xl font-semibold text-xs text-slate-700 transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Play size={13} className="text-amber-600" />
+                <span>Test Toast Notification</span>
+              </button>
+            </div>
+          </form>
         </div>
+      </Card3D>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-[#ECEFF4] border-b border-slate-300/70 text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
-              <tr>
-                <th className="px-6 py-3.5">Provider</th>
-                <th className="px-6 py-3.5">Monthly Cap</th>
-                <th className="px-6 py-3.5">Threshold Trigger</th>
-                <th className="px-6 py-3.5 min-w-[200px]">Spend vs Threshold</th>
-                <th className="px-6 py-3.5">Status</th>
-                <th className="px-6 py-3.5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200/70 text-xs">
-              {loading ? (
+      {/* 5. Active Budgets Table (Off-White #F8F9FB Card with Visual Progress Bars & Threshold Markers) */}
+      <Card3D className="card-3d bg-[#F8F9FB] rounded-2xl overflow-hidden" maxTilt={2}>
+        <div className="layer-z-10">
+          <div className="px-6 py-5 border-b border-slate-200/80 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell size={16} className="text-indigo-600" />
+              <h2 className="text-base font-heading font-bold text-slate-900 tracking-tight">
+                Active Provider Budgets & Threshold Guardrails
+              </h2>
+            </div>
+            <span className="text-xs font-semibold text-slate-500 font-mono">
+              {budgets.length} Guardrails Active
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-[#ECEFF4] border-b border-slate-300/70 text-slate-500 text-[11px] font-semibold uppercase tracking-wider">
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-slate-500 font-medium">
-                    Loading budget surveillance data...
-                  </td>
+                  <th className="px-6 py-3.5">Provider</th>
+                  <th className="px-6 py-3.5">Monthly Cap</th>
+                  <th className="px-6 py-3.5">Threshold Trigger</th>
+                  <th className="px-6 py-3.5 min-w-[200px]">Spend vs Threshold</th>
+                  <th className="px-6 py-3.5">Status</th>
+                  <th className="px-6 py-3.5 text-right">Actions</th>
                 </tr>
-              ) : budgets.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-slate-500 font-medium">
-                    No budgets configured yet. Configure one above to enforce percentage limits and trigger visual toasts.
-                  </td>
-                </tr>
-              ) : (
-                budgets.map((budget) => {
-                  const currentSpend = spendByProvider.get(budget.provider_id) || 0;
-                  const monthlyLimit = Number(budget.monthly_limit_usd);
-                  const configuredThreshold = budget.alert_at_percent ? Number(budget.alert_at_percent) : (budget.alert_thresholds?.[0] || 80);
-                  const spendPercent = monthlyLimit > 0 ? (currentSpend / monthlyLimit) * 100 : 0;
-                  const thresholdAmount = monthlyLimit > 0 ? (monthlyLimit * configuredThreshold) / 100 : 0;
-                  const isExceeded = currentSpend >= thresholdAmount;
-                  const isBreached = spendPercent >= 100;
+              </thead>
+              <tbody className="divide-y divide-slate-200/70 text-xs">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500 font-medium">
+                      Loading budget surveillance data...
+                    </td>
+                  </tr>
+                ) : budgets.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500 font-medium">
+                      No budgets configured yet. Configure one above to enforce percentage limits and trigger visual toasts.
+                    </td>
+                  </tr>
+                ) : (
+                  budgets.map((budget) => {
+                    const currentSpend = spendByProvider.get(budget.provider_id) || 0;
+                    const monthlyLimit = Number(budget.monthly_limit_usd);
+                    const configuredThreshold = budget.alert_at_percent ? Number(budget.alert_at_percent) : (budget.alert_thresholds?.[0] || 80);
+                    const spendPercent = monthlyLimit > 0 ? (currentSpend / monthlyLimit) * 100 : 0;
+                    const thresholdAmount = monthlyLimit > 0 ? (monthlyLimit * configuredThreshold) / 100 : 0;
+                    const isExceeded = currentSpend >= thresholdAmount;
+                    const isBreached = spendPercent >= 100;
 
-                  return (
-                    <tr key={budget.provider_id} className="hover:bg-[#ECEFF4]/60 transition-colors">
-                      {/* Provider */}
-                      <td className="px-6 py-4 font-semibold text-slate-900">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${
-                            isBreached ? 'bg-rose-500 animate-ping' : isExceeded ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
-                          }`} />
-                          <span className="capitalize">{PROVIDER_NAMES[budget.provider_id] || budget.provider_id}</span>
-                        </div>
-                      </td>
-
-                      {/* Monthly Cap */}
-                      <td className="px-6 py-4 font-mono font-bold text-slate-900">
-                        ${monthlyLimit.toFixed(2)}
-                      </td>
-
-                      {/* Threshold Trigger */}
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/80 text-[11px]">
-                              {configuredThreshold}%
-                            </span>
-                            <span className="text-slate-500 text-[11px] font-mono">
-                              (${thresholdAmount.toFixed(2)})
-                            </span>
+                    return (
+                      <tr key={budget.provider_id} className="hover:bg-[#ECEFF4]/60 transition-colors">
+                        {/* Provider */}
+                        <td className="px-6 py-4 font-semibold text-slate-900">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${
+                              isBreached ? 'bg-rose-500 animate-ping' : isExceeded ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
+                            }`} />
+                            <span className="capitalize">{PROVIDER_NAMES[budget.provider_id] || budget.provider_id}</span>
                           </div>
-                          {budget.alert_thresholds && budget.alert_thresholds.length > 1 && (
-                            <span className="text-[10px] text-slate-400 mt-0.5">
-                              Tiers: {budget.alert_thresholds.join('%, ')}%
+                        </td>
+
+                        {/* Monthly Cap */}
+                        <td className="px-6 py-4 font-mono font-bold text-slate-900">
+                          ${monthlyLimit.toFixed(2)}
+                        </td>
+
+                        {/* Threshold Trigger */}
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200/80 text-[11px]">
+                                {configuredThreshold}%
+                              </span>
+                              <span className="text-slate-500 text-[11px] font-mono">
+                                (${thresholdAmount.toFixed(2)})
+                              </span>
+                            </div>
+                            {budget.alert_thresholds && budget.alert_thresholds.length > 1 && (
+                              <span className="text-[10px] text-slate-400 mt-0.5">
+                                Tiers: {budget.alert_thresholds.join('%, ')}%
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Spend Progress Bar with Threshold Marker Pin */}
+                        <td className="px-6 py-4">
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-[11px]">
+                              <span className="font-mono font-semibold text-slate-800">
+                                ${currentSpend.toFixed(2)}
+                              </span>
+                              <span className={`font-mono font-bold ${
+                                isBreached ? 'text-rose-600' : isExceeded ? 'text-amber-600' : 'text-slate-500'
+                              }`}>
+                                {spendPercent.toFixed(1)}%
+                              </span>
+                            </div>
+
+                            {/* Progress bar with threshold pin indicator */}
+                            <div className="relative w-full h-2.5 bg-slate-300/70 rounded-full overflow-hidden shadow-[inset_0_1px_1px_rgba(0,0,0,0.06)]">
+                              {/* Threshold Notch Line */}
+                              <div 
+                                className="absolute top-0 bottom-0 w-0.5 bg-slate-700 z-10" 
+                                style={{ left: `${Math.min(configuredThreshold, 100)}%` }}
+                                title={`Threshold: ${configuredThreshold}%`}
+                              />
+
+                              {/* Active Fill */}
+                              <div 
+                                className={`h-full transition-all duration-300 ${
+                                  isBreached 
+                                    ? 'bg-rose-500' 
+                                    : isExceeded 
+                                      ? 'bg-amber-500' 
+                                      : 'bg-emerald-500'
+                                }`} 
+                                style={{ width: `${Math.min(spendPercent, 100)}%` }} 
+                              />
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Status Badge */}
+                        <td className="px-6 py-4">
+                          {isBreached ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                              <Flame size={12} />
+                              <span>Cap Breached (+{(spendPercent - 100).toFixed(0)}%)</span>
+                            </span>
+                          ) : isExceeded ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              <AlertTriangle size={12} />
+                              <span>Exceeded ({spendPercent.toFixed(0)}% / {configuredThreshold}%)</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <CheckCircle2 size={12} />
+                              <span>Nominal</span>
                             </span>
                           )}
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Spend Progress Bar with Threshold Marker Pin */}
-                      <td className="px-6 py-4">
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between text-[11px]">
-                            <span className="font-mono font-semibold text-slate-800">
-                              ${currentSpend.toFixed(2)}
-                            </span>
-                            <span className={`font-mono font-bold ${
-                              isBreached ? 'text-rose-600' : isExceeded ? 'text-amber-600' : 'text-slate-500'
-                            }`}>
-                              {spendPercent.toFixed(1)}%
-                            </span>
+                        {/* Actions */}
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleSimulateToast(budget)}
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-200 transition-colors cursor-pointer"
+                              title="Test toast notification for this budget"
+                            >
+                              <Bell size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleEditBudget(budget)}
+                              className="px-2.5 py-1 rounded-lg bg-[#ECEFF4] hover:bg-slate-200 border border-slate-300 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                            >
+                              Edit
+                            </button>
                           </div>
-
-                          {/* Progress bar with threshold pin indicator */}
-                          <div className="relative w-full h-2.5 bg-slate-300/70 rounded-full overflow-hidden shadow-[inset_0_1px_1px_rgba(0,0,0,0.06)]">
-                            {/* Threshold Notch Line */}
-                            <div 
-                              className="absolute top-0 bottom-0 w-0.5 bg-slate-700 z-10" 
-                              style={{ left: `${Math.min(configuredThreshold, 100)}%` }}
-                              title={`Threshold: ${configuredThreshold}%`}
-                            />
-
-                            {/* Active Fill */}
-                            <div 
-                              className={`h-full transition-all duration-300 ${
-                                isBreached 
-                                  ? 'bg-rose-500' 
-                                  : isExceeded 
-                                    ? 'bg-amber-500' 
-                                    : 'bg-emerald-500'
-                              }`} 
-                              style={{ width: `${Math.min(spendPercent, 100)}%` }} 
-                            />
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Status Badge */}
-                      <td className="px-6 py-4">
-                        {isBreached ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                            <Flame size={12} />
-                            <span>Cap Breached (+{(spendPercent - 100).toFixed(0)}%)</span>
-                          </span>
-                        ) : isExceeded ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                            <AlertTriangle size={12} />
-                            <span>Exceeded ({spendPercent.toFixed(0)}% / {configuredThreshold}%)</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <CheckCircle2 size={12} />
-                            <span>Nominal</span>
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleSimulateToast(budget)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-200 transition-colors cursor-pointer"
-                            title="Test toast notification for this budget"
-                          >
-                            <Bell size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleEditBudget(budget)}
-                            className="px-2.5 py-1 rounded-lg bg-[#ECEFF4] hover:bg-slate-200 border border-slate-300 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
-                          >
-                            Edit
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </Card3D>
     </div>
   );
 }

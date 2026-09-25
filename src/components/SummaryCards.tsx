@@ -13,6 +13,7 @@ import {
   TrendingDown, 
   Layers
 } from 'lucide-react';
+import Card3D from './Card3D';
 
 export interface SummaryStats {
   totalKeysActive: number;
@@ -153,11 +154,12 @@ export default function SummaryCards({ stats, timeframe = 'this_month' }: Summar
   return (
     <div id="summary-cards-container" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
       {/* Card 1: TOTAL API CAPITAL */}
-      <div 
+      <Card3D 
         id="card-total-spend"
         className="card-3d bg-white p-6 rounded-2xl flex flex-col justify-between relative overflow-hidden group border border-slate-200/90"
+        maxTilt={6}
       >
-        <div>
+        <div className="layer-z-10">
           <div className="flex justify-between items-start mb-3">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
@@ -187,14 +189,15 @@ export default function SummaryCards({ stats, timeframe = 'this_month' }: Summar
         </div>
 
         <SparklineWave color="indigo" id="spend" />
-      </div>
+      </Card3D>
 
       {/* Card 2: TOKEN THROUGHPUT */}
-      <div 
+      <Card3D 
         id="card-token-reach"
         className="card-3d bg-white p-6 rounded-2xl flex flex-col justify-between relative overflow-hidden group border border-slate-200/90"
+        maxTilt={6}
       >
-        <div>
+        <div className="layer-z-10">
           <div className="flex justify-between items-start mb-3">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500" />
@@ -221,14 +224,15 @@ export default function SummaryCards({ stats, timeframe = 'this_month' }: Summar
         </div>
 
         <SparklineWave color="fuchsia" id="tokens" />
-      </div>
+      </Card3D>
 
       {/* Card 3: ACTIVE VAULT PIPELINES */}
-      <div 
+      <Card3D 
         id="card-active-keys"
         className="card-3d bg-white p-6 rounded-2xl flex flex-col justify-between relative overflow-hidden group border border-slate-200/90"
+        maxTilt={6}
       >
-        <div>
+        <div className="layer-z-10">
           <div className="flex justify-between items-start mb-3">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -257,14 +261,15 @@ export default function SummaryCards({ stats, timeframe = 'this_month' }: Summar
         </div>
 
         <SparklineWave color="emerald" id="keys" />
-      </div>
+      </Card3D>
 
       {/* Card 4: BUDGET BURN RESILIENCE */}
-      <div 
+      <Card3D 
         id="card-burn-rate"
         className="card-3d bg-white p-6 rounded-2xl flex flex-col justify-between relative overflow-hidden group border border-slate-200/90"
+        maxTilt={6}
       >
-        <div>
+        <div className="layer-z-10">
           <div className="flex justify-between items-start mb-3">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -291,7 +296,7 @@ export default function SummaryCards({ stats, timeframe = 'this_month' }: Summar
         </div>
 
         <SparklineWave color="amber" id="burn" />
-      </div>
+      </Card3D>
     </div>
   );
 }
