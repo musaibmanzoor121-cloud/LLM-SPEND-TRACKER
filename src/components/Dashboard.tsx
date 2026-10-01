@@ -32,6 +32,7 @@ import TokenConsumptionChart from './TokenConsumptionChart';
 import Card3D from './Card3D';
 import HolographicSentinelGauge from './HolographicSentinelGauge';
 import Fleet3DMatrix from './Fleet3DMatrix';
+import ApiKeyHealthWidget from './ApiKeyHealthWidget';
 
 interface SpendData {
   provider_id: string;
@@ -525,7 +526,12 @@ export default function Dashboard() {
         <Fleet3DMatrix />
       </div>
 
-      {/* 4. Security Vault & Surveillance Journal 2-Column Grid */}
+      {/* 4. Real-Time API Key Health & Error Telemetry Widget (200 OK vs Error Rate Sparkline) */}
+      <div id="api-key-health-section">
+        <ApiKeyHealthWidget />
+      </div>
+
+      {/* 5. Security Vault & Surveillance Journal 2-Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Col 1: API Key Vault & Security Posture */}
         <Card3D className="card-3d rounded-2xl p-5 md:p-6 flex flex-col justify-between" maxTilt={4}>
