@@ -74,6 +74,7 @@ export default function Dashboard() {
   const [timeframe, setTimeframe] = useState<'this_month' | 'last_30_days' | 'quarter'>('this_month');
   const [chartMetric, setChartMetric] = useState<'spend' | 'tokens'>('spend');
   const [auditFilter, setAuditFilter] = useState<'all' | 'security' | 'budget'>('all');
+  const [isLiveHealthPolling, setIsLiveHealthPolling] = useState(true);
 
   const fetchData = async () => {
     try {
@@ -296,6 +297,34 @@ export default function Dashboard() {
             >
               30 Days
             </button>
+          </div>
+
+          {/* 'Live Update' Real-Time Polling Toggle Switch */}
+          <div className="flex items-center gap-2 px-2.5 py-1 bg-[#E2E6ED] rounded-lg border border-slate-300/80 shadow-[inset_0_1px_1px_rgba(0,0,0,0.06)]">
+            <div className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${isLiveHealthPolling ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              <span className="text-xs font-semibold text-slate-700">Live Update</span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isLiveHealthPolling}
+              onClick={() => setIsLiveHealthPolling(prev => !prev)}
+              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                isLiveHealthPolling ? 'bg-emerald-600' : 'bg-slate-400'
+              }`}
+              title={isLiveHealthPolling ? "Pause real-time API health polling" : "Resume real-time API health polling"}
+            >
+              <span className="sr-only">Toggle live polling of API health data</span>
+              <span
+                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                  isLiveHealthPolling ? 'translate-x-4' : 'translate-x-0'
+                }`}
+              />
+            </button>
+            <span className={`text-[10px] font-bold ${isLiveHealthPolling ? 'text-emerald-700' : 'text-slate-500'}`}>
+              {isLiveHealthPolling ? 'Active' : 'Paused'}
+            </span>
           </div>
 
           <button
@@ -528,7 +557,10 @@ export default function Dashboard() {
 
       {/* 4. Real-Time API Key Health & Error Telemetry Widget (200 OK vs Error Rate Sparkline) */}
       <div id="api-key-health-section">
-        <ApiKeyHealthWidget />
+        <ApiKeyHealthWidget 
+          isLivePolling={isLiveHealthPolling}
+          onToggleLivePolling={() => setIsLiveHealthPolling(prev => !prev)}
+        />
       </div>
 
       {/* 5. Security Vault & Surveillance Journal 2-Column Grid */}

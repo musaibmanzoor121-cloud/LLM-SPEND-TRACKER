@@ -26,7 +26,9 @@ import {
   ArrowRight,
   TrendingUp,
   Cpu,
-  Clock
+  Clock,
+  Pause,
+  Play
 } from 'lucide-react';
 import Card3D from './Card3D';
 
@@ -75,6 +77,11 @@ interface FleetAggregate {
   lastUpdated: string;
 }
 
+export interface ApiKeyHealthWidgetProps {
+  isLivePolling?: boolean;
+  onToggleLivePolling?: () => void;
+}
+
 const PROVIDER_METADATA: Record<string, { name: string; border: string; bg: string; text: string; dot: string }> = {
   openai: { 
     name: 'OpenAI', 
@@ -120,9 +127,16 @@ const PROVIDER_METADATA: Record<string, { name: string; border: string; bg: stri
   }
 };
 
-export default function ApiKeyHealthWidget() {
+export default function ApiKeyHealthWidget({
+  isLivePolling: controlledIsLive,
+  onToggleLivePolling
+}: ApiKeyHealthWidgetProps = {}) {
+  const [internalIsLive, setInternalIsLive] = useState(true);
+  const isLive = controlledIsLive !== undefined ? controlledIsLive : internalIsLive;
+
   const [data, setData] = useState<{ keys: KeyHealthItem[]; aggregate: FleetAggregate } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastPolledTime, setLastPolledTime] = useState<string>('');
   const [selectedKeyId, setSelectedKeyId] = useState<string>('all');
   const [pingingId, setPingingId] = useState<string | null>(null);
   const [pingAllActive, setPingAllActive] = useState(false);
@@ -137,6 +151,7 @@ export default function ApiKeyHealthWidget() {
       if (res.ok) {
         const json = await res.json();
         setData(json);
+        setLastPolledTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       }
     } catch (err) {
       console.error('Failed to fetch key health telemetry:', err);
@@ -145,12 +160,35 @@ export default function ApiKeyHealthWidget() {
     }
   };
 
+  // Initial load
   useEffect(() => {
     fetchHealthData();
-    // Real-time telemetry heartbeat polling every 20 seconds
-    const interval = setInterval(fetchHealthData, 20000);
-    return () => clearInterval(interval);
   }, []);
+
+  // Real-time telemetry polling interval - only runs when isLive is true
+  useEffect(() => {
+    if (!isLive) return;
+
+    // Real-time telemetry heartbeat polling every 20 seconds when live
+    const interval = setInterval(() => {
+      fetchHealthData();
+    }, 20000);
+
+    return () => clearInterval(interval);
+  }, [isLive]);
+
+  const handleToggleLive = () => {
+    const nextState = !isLive;
+    if (onToggleLivePolling) {
+      onToggleLivePolling();
+    } else {
+      setInternalIsLive(nextState);
+    }
+    if (nextState) {
+      // Immediately fetch fresh data when resuming polling
+      fetchHealthData();
+    }
+  };
 
   const handlePingKey = async (keyId: string) => {
     setPingingId(keyId);
@@ -244,10 +282,17 @@ export default function ApiKeyHealthWidget() {
                 <h3 className="text-base font-heading font-bold text-slate-900 tracking-tight">
                   API Key Health & Error Telemetry
                 </h3>
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300/80">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
-                  {aggregate.successRate >= 99 ? '99.8% Healthy' : 'Degraded'}
-                </span>
+                {isLive ? (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300/80">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
+                    {aggregate.successRate >= 99 ? '99.8% Healthy' : 'Degraded'} · Live
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300/80">
+                    <Pause size={10} className="text-amber-700" />
+                    Polling Paused
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
                 Real-time 200 OK throughput vs 4xx/5xx error rates across configured vault keys.
@@ -255,7 +300,35 @@ export default function ApiKeyHealthWidget() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {/* 'Live Update' Polling Toggle Switch */}
+            <div className="flex items-center gap-2 px-2.5 py-1 bg-[#E2E6ED] rounded-lg border border-slate-300/80 shadow-[inset_0_1px_1px_rgba(0,0,0,0.06)]">
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                <span className="text-[11px] font-semibold text-slate-700">Live Update</span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isLive}
+                onClick={handleToggleLive}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  isLive ? 'bg-emerald-600' : 'bg-slate-400'
+                }`}
+                title={isLive ? "Click to pause real-time API health polling" : "Click to resume real-time API health polling"}
+              >
+                <span className="sr-only">Toggle live polling of API health data</span>
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    isLive ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+              <span className={`text-[10px] font-bold ${isLive ? 'text-emerald-700' : 'text-slate-500'}`}>
+                {isLive ? 'Live' : 'Paused'}
+              </span>
+            </div>
+
             {/* View Mode Toggle */}
             <div className="flex items-center p-0.5 bg-[#E2E6ED] rounded-lg border border-slate-300/80">
               <button
@@ -424,9 +497,25 @@ export default function ApiKeyHealthWidget() {
                 Error Rate (4xx / 5xx)
               </span>
             </div>
-            <span className="text-[11px] font-mono text-slate-400">
-              Live Recharts Telemetry
-            </span>
+            <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400">
+              {isLive ? (
+                <span className="flex items-center gap-1 text-emerald-600 font-sans font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live Stream (20s)
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-amber-600 font-sans font-medium">
+                  <Pause size={10} className="stroke-[2.5]" />
+                  Polling Paused
+                </span>
+              )}
+              {lastPolledTime && (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span className="text-slate-500 font-sans">Synced {lastPolledTime}</span>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="w-full h-28 relative">
