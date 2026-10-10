@@ -26,13 +26,17 @@ import {
   Cpu,
   CheckCircle2,
   ArrowRight,
-  KeyRound
+  KeyRound,
+  Globe
 } from 'lucide-react';
 import TokenConsumptionChart from './TokenConsumptionChart';
 import Card3D from './Card3D';
 import HolographicSentinelGauge from './HolographicSentinelGauge';
 import Fleet3DMatrix from './Fleet3DMatrix';
 import ApiKeyHealthWidget from './ApiKeyHealthWidget';
+import LiveMarketIntelModal from './LiveMarketIntelModal';
+import PredictiveCostCard from './PredictiveCostCard';
+import ProviderCostBreakdown from './ProviderCostBreakdown';
 
 interface SpendData {
   provider_id: string;
@@ -75,6 +79,7 @@ export default function Dashboard() {
   const [chartMetric, setChartMetric] = useState<'spend' | 'tokens'>('spend');
   const [auditFilter, setAuditFilter] = useState<'all' | 'security' | 'budget'>('all');
   const [isLiveHealthPolling, setIsLiveHealthPolling] = useState(true);
+  const [showMarketIntel, setShowMarketIntel] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -346,6 +351,15 @@ export default function Dashboard() {
             <span className="hidden sm:inline">Sync</span>
           </button>
 
+          <button
+            onClick={() => setShowMarketIntel(true)}
+            className="btn-3d-offwhite px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer text-slate-700"
+            title="View up-to-date AI model pricing grounded by Google Search data"
+          >
+            <Globe size={13} className="text-blue-600" />
+            <span className="hidden sm:inline">Market Rates</span>
+          </button>
+
           <Link
             to="/chat"
             className="btn-3d-primary px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 tracking-tight cursor-pointer"
@@ -474,10 +488,31 @@ export default function Dashboard() {
               <span>7-Day Moving Avg: </span>
               <strong className="text-slate-800">$1,480.00</strong>
             </div>
-            <Link to="/budgets" className="text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1">
-              <span>View Run-Rate Forecast</span>
-              <ArrowRight size={12} />
-            </Link>
+            <div className="flex items-center gap-3">
+              <a 
+                href="#predictive-cost-forecast-section" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('predictive-cost-forecast-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <span>Predictive Forecast</span>
+                <ArrowRight size={12} />
+              </a>
+              <span className="text-slate-300">·</span>
+              <a 
+                href="#provider-cost-breakdown-section" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('provider-cost-breakdown-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <span>Provider Breakdown</span>
+                <ArrowRight size={12} />
+              </a>
+            </div>
           </div>
         </Card3D>
 
@@ -550,7 +585,29 @@ export default function Dashboard() {
         </Card3D>
       </div>
 
-      {/* 3. Interactive 3D Spatial Model Fleet Topology Matrix */}
+      {/* 3. Predictive AI Cost Intelligence & Monthly Spend Forecast Card */}
+      <div id="predictive-cost-forecast-section">
+        <PredictiveCostCard
+          budgets={data?.budgets}
+          dailyTrend={data?.dailyTrend}
+          spendData={data?.spendData}
+          timeframe={timeframe}
+          onRefresh={fetchData}
+        />
+      </div>
+
+      {/* 4. Comparative Breakdown of API Costs by Provider (OpenAI, Anthropic, Gemini, etc.) */}
+      <div id="provider-cost-breakdown-section">
+        <ProviderCostBreakdown
+          spendData={data?.spendData}
+          dailyTrend={data?.dailyTrend}
+          budgets={data?.budgets}
+          modelBreakdown={data?.modelBreakdown}
+          timeframe={timeframe}
+        />
+      </div>
+
+      {/* 5. Interactive 3D Spatial Model Fleet Topology Matrix */}
       <div>
         <Fleet3DMatrix />
       </div>
@@ -697,6 +754,12 @@ export default function Dashboard() {
       <div>
         <TokenConsumptionChart data={data?.dailyTokenTrend || []} isLoading={loading} />
       </div>
+
+      {/* Live AI Market Intel Modal (Google Search Grounded) */}
+      <LiveMarketIntelModal 
+        isOpen={showMarketIntel} 
+        onClose={() => setShowMarketIntel(false)} 
+      />
     </div>
   );
 }

@@ -28,6 +28,10 @@ export interface ChatMessage {
   chatId: string;
   role: 'user' | 'model' | 'system';
   content: string;
+  grounding?: {
+    sources: { title: string; uri: string }[];
+    queries: string[];
+  };
   createdAt: string;
 }
 
@@ -100,7 +104,11 @@ export async function addChatMessage(
   userId: string, 
   chatId: string, 
   role: 'user' | 'model', 
-  content: string
+  content: string,
+  grounding?: {
+    sources: { title: string; uri: string }[];
+    queries: string[];
+  }
 ): Promise<string> {
   const messageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
   const path = `users/${userId}/chats/${chatId}/messages/${messageId}`;
@@ -111,7 +119,8 @@ export async function addChatMessage(
       chatId,
       role,
       content: content.slice(0, 50000),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      ...(grounding ? { grounding } : {})
     };
     await setDoc(doc(db, 'users', userId, 'chats', chatId, 'messages', messageId), message);
 
